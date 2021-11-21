@@ -1,0 +1,62 @@
+//@version=4
+//Created by Robert Nance on 072315
+study(title="Moving Average Colored EMA/SMA", shorttitle="Colored EMA /SMA", overlay=true)
+emaplot = input (true, title="Show EMA on chart")
+len = input(8, minval=1, title="ema Length")
+src = close
+out = ema(src, len)
+up = out > out[1]
+down = out < out[1]
+mycolor = up ? color.green : down ? color.red : color.blue
+plot(out and emaplot ? out :na, title="EMA", color=mycolor, linewidth=1)
+
+
+smaplot = input (false, title="Show SMA on chart")
+len2 = input(8, minval=1, title="sma Length")
+src2 = close
+out2 = sma(src2, len2)
+up2 = out2 > out2[1]
+down2 = out2 < out2[1]
+mycolor2 = up2 ? color.green : down2 ? color.red : color.blue
+plot(out2 and smaplot ? out2 :na , title="SMA", color=mycolor2, linewidth=1)
+
+lenA = input(10, minval=1, title="SMA #A")
+srcA = input(close, title="SMA Source #A")
+outA = sma(srcA, lenA)
+plot(outA, title="SMA #A", color=close >= outA ? color.yellow : color.yellow, linewidth = 1)
+
+lenB = input(20, minval=1, title="SMA #B")
+srcB = input(close, title="SMA Source #B")
+outB = sma(srcB, lenB)
+plot(outB, title="SMA #B", color=close >= outB ? color.orange : color.orange, linewidth = 1)
+
+lenC = input(50, minval=1, title="SMA #C")
+srcC = input(close, title="SMA Source #C")
+outC = sma(srcC, lenC)
+plot(outC, title="SMA #C", color=close >= outC ? color.red : color.red, linewidth = 1)
+
+lenH55 = input(55, minval=1, title="HMA #H55")
+srcH55 = input(close, title="HMA Source #H55")
+outH55 = hma(srcH55, lenH55)
+plot(outH55, title="SMA #H55", color=close >= outH55 ? ( outH55 > outH55[1] ? color.lime : (close > outH55 ? color.white : color.silver) ) :  color.gray, linewidth = 1)
+
+lenD = input(100, minval=1, title="SMA #D")
+srcD = input(close, title="SMA Source #D")
+outD = sma(srcD, lenD)
+plot(outD, title="SMA #D", color=close >= outD ? color.fuchsia : color.fuchsia, linewidth = 1)
+
+lenE = input(200, minval=1, title="SMA #E")
+srcE = input(close, title="SMA Source #E")
+outE = sma(srcE, lenE)
+plot(outE, title="SMA #E", color=close >= outE ? color.maroon : color.maroon, linewidth = 1)
+
+
+
+
+
+
+
+
+
+
+

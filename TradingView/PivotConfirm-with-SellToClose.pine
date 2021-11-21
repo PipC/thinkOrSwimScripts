@@ -1,0 +1,65 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// c philchan2008
+
+//@version=4
+strategy(title="PivotConfirm-with-SellToClose", overlay=true, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, pyramiding = 0, initial_capital=10000)
+
+data = input(close, title = "Data source")
+n = input(5, title = "For pivot/standard deviation")
+addAtPercentStDev = input(75, title = "% of standard deviation below previous low")
+initialLots = input(4, title = "initialLots")
+lotsToAdd = input(2, title = "Lots to add")
+stDevMult = input(2.0, title = "tail stop multiplier")
+
+openingLots = max(4, initialLots)
+addedlots = max(2, lotsToAdd)
+
+h = high
+l = low
+c = close
+//nan=na replace nan to na
+tick = syminfo.mintick //ticks()
+x = 0
+x := bar_index  //BarNumber();
+stDev = x > 1 ? stdev(c,n): na //CompoundValue(1, StDev(c, n), nan);
+ll = l == lowest(l, n)
+LPx =  ll ? x : na
+LP_low = 0.0
+LP_low := na(LPx) ? LP_low[1] : l
+LP_High = 0.0
+LP_High := na(LPx) ? LP_High[1] : h
+confirmation_count = 0.0
+confirmation_count := ll ? 0 : ( crossover(c,LP_High) ? confirmation_count[1] + 1 : confirmation_count[1])
+confirmationX =  crossover( confirmation_count, 0) ? x : na
+confirmed = crossover(confirmation_count, 0)
+
+ro=0.0
+stc=0.0
+trail=0.0
+retrace=0.0
+if confirmed
+    ro := round((c + (c - LP_low) / (openingLots - 2)) / tick) * tick
+    stc := LP_low
+    trail := LP_low
+    retrace := LP_low
+else
+    ro := x > 1 ? ro[1] : na //CompoundValue(1, ro[1], nan)
+    stc := stc[1]
+    trail := round(max(trail[1], l[1] - stDev[1] * stDevMult) / tick) * tick
+    retrace := round(max(retrace[1], l[1] - stDev[1] * addAtPercentStDev / 100) / tick) * tick
+
+ro_reached = 0.0
+ro_reached := confirmed ? 0 : ( h > ro ? 1 : ro_reached[1] )
+added = 0.0
+added := confirmed ? 0 :  ( crossunder(l,retrace) ? 1 : added[1])
+trail_hit = 0.0
+trail_hit := confirmed ? 0 : ( c < trail ? 1 : trail_hit[1])
+stop_hit = 0.0
+stop_hit := confirmed ? 0 : ( l < stc ? 1 : stop_hit[1])
+
+//plot(stop_hit, title="Stop Hit", color=color.red, style=line.style_solid, linewidth=2)
+plot(trail_hit, title='Trail Stop', color=color.red, linewidth=2, style=plot.style_line, transp=10)
+
+//if (bar_index == 1000)
+//    label l1= label.new(bar_index-50, high[0], text="There are "+tostring(bar_index)+" bars on chart", style=label.style_none, textcolor=color.orange)
+

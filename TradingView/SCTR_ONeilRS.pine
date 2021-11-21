@@ -1,0 +1,97 @@
+//@version=4
+
+study("SCTR & ONeil RS", shorttitle="SCTR with COLOR", precision = 1)
+//
+value = input (close, "value")
+Fc = input(3,"Multiplier")
+LT_Rate = input (60,"LT_% Rate")
+MT_Rate = input (30,"MT_% Rate")
+ST_Rate = input (10,"ST_% Rate")
+//Long term input
+LT_EMA = input (200,"LT_EMA")
+LT_ROC = input (125, "LT_ROC")
+//Middle term
+MT_EMA = input (50,"MT_EMA")
+MT_ROC = input(20,"MT_ROC")
+//Short term input
+ST_EMA = input (9,"ST_EMA")
+ST_RSI = input(14,"ST_RSI")
+//Long term integer
+LT_EMAV = ((value - ema(value,LT_EMA)) / ema(value,LT_EMA))*100
+LT_ROCV = roc(value,LT_ROC)
+
+//Middle term integer
+MT_EMAV = (value - ema(value,MT_EMA)) / ema(value,MT_EMA)
+MT_ROCV = roc(value,MT_ROC)
+//Short term integer
+ST_EMAV = ((value - ema(value,ST_EMA)) / ema(value,ST_EMA))*100
+ST_RSIV = (rsi(value,ST_RSI))-50
+//
+LT_Val = LT_Rate*0.01*((LT_EMAV + LT_ROCV)/2)
+MT_Val = MT_Rate*0.01*((MT_EMAV + MT_ROCV)/2)
+ST_Val = ST_Rate*0.01*((ST_EMAV + ST_RSIV)/2)
+SCTR = 50+(Fc*(LT_Val + MT_Val + ST_Val))
+SCTRV = SCTR >= 0.1 and SCTR <= 99.9 ? SCTR : SCTR > 99.9 ? 99.9 : SCTR < 0.1 ? 0.1 : na
+//SCTR2 = SCTR > 120 ? ( SCTR > 200 ? SCTR / 4 : SCTR / 2) : SCTR < 0 ? ( SCTR / 3 ) : SCTR
+CL = 50
+LINE_COLOR= SCTRV > 80 ? color.lime : SCTRV > 50 ? color.gray : color.orange
+plot(SCTRV,"SCTR",color =LINE_COLOR, linewidth=1, style=plot.style_stepline, transp=60)
+//plot(SCTR2,"SCTR Project", color=gray)
+plot(CL,"CL",color = color.blue, linewidth = 1 )
+
+
+price = close
+
+//  1 Wk ¡V 5 trading days
+//  1 Mos ¡V 21 Days
+//  3 Mos ¡V 63 Days
+//  6 Mos ¡V 126 Days
+//  12 Mos ¡V 252 Days
+
+v_year    = price-price[252] < 0 ? 0 : price-price[252]
+v_nine    = price-price[189] < 0 ? 0 : price-price[189]
+v_six     = price-price[126] < 0 ? 0 : price-price[126]
+v_three   = price-price[63 ] < 0 ? 0 : price-price[63 ]
+v_weighted=  ((2*v_three) + v_six + v_nine + v_year)/4 < 0 ? 0 : ((2*v_three + v_six + v_nine + v_year)/4)
+
+h = highest(high, 252)
+l = lowest(low, 252)
+hilo = abs(h-l)
+calc = v_weighted/ hilo
+middleLevel = 50
+
+plot(middleLevel, title="Middle Level", color=color.white, linewidth=1, style=plot.style_line)
+
+rsrank = round(100* calc)
+
+plot_color = rsrank > 50 ? color.green : color.red
+
+//if RSRank > 80 then color.dark_green else
+//                       if RSRank > 60 and RSRank <= 80 then createcolor(0,175,0) else
+//                       if RSRank > 40 and RSRank <= 60 then color.gray else
+//                       if RSRank > 20 and RSRank <= 40 then CreateColor(220, 0,0) else
+//                       if RSRank <= 20 then CreateColor(150, 0,0) else
+//                       color.white
+
+plot(rsrank, title="RS Rank", color=plot_color, linewidth=1, style=plot.style_line)
+
+//rs10avg = sma(rsrank, 10)
+//rs20avg = sma(rsrank, 20)
+//rs50avg = sma(rsrank, 50)
+//rs100avg = sma(rsrank, 100)
+
+//plot(rs10avg, title="RS 10", color=color.teal, linewidth=2, style=plot.style_line)
+//plot(rs20avg, title="RS 20", color=color.aqua, linewidth=2, style=plot.style_line)
+//plot(rs50avg, title="RS 50", color=color.orange, linewidth=2, style=plot.style_line)
+//plot(rs100avg, title="RS 100", color=color.red, linewidth=2, style=plot.style_line)
+
+plot(ema(rsrank,7),title="7",color=#f7df9b,linewidth=1,transp=0)
+plot(ema(rsrank,14),title="14",color=#f1c789,linewidth=1,transp=0)
+plot(ema(rsrank,21),title="21",color=#e59a67,linewidth=1,transp=0)
+plot(ema(rsrank,28),title="28",color=#d66e46,linewidth=1,transp=0)
+plot(ema(rsrank,35),title="35",color=#c14c32,linewidth=1,transp=0)
+plot(ema(rsrank,42),title="42",color=#a43328,linewidth=1,transp=0)
+plot(ema(rsrank,49),title="49",color=#861f24,linewidth=1,transp=0)
+plot(ema(rsrank,56),title="56",color=#711120,linewidth=1,transp=0)
+
+

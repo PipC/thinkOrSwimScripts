@@ -1,0 +1,151 @@
+//@version=4
+study("Supertrendx3", overlay = true, format=format.price, precision=2, resolution="")
+
+Periods_1 = input(title="ATR Period 1", type=input.integer, defval=10)
+Periods_2 = input(title="ATR Period 2", type=input.integer, defval=11)
+Periods_3 = input(title="ATR Period 3", type=input.integer, defval=12)
+src = input(hl2, title="Source")
+
+Multiplier_1 = input(title="ATR Multiplier 1", type=input.float, step=0.1, defval=1.0)
+Multiplier_2 = input(title="ATR Multiplier 2", type=input.float, step=0.1, defval=2.0)
+Multiplier_3 = input(title="ATR Multiplier 3", type=input.float, step=0.1, defval=3.0)
+
+changeATR= input(title="Change ATR Calculation Method ?", type=input.bool, defval=true)
+showsignals = input(title="Show Buy/Sell Signals ?", type=input.bool, defval=true)
+highlighting = input(title="Highlighter On/Off ?", type=input.bool, defval=true)
+
+
+atr2_1 = sma(tr, Periods_1)
+atr_1= changeATR ? atr(Periods_1) : atr2_1
+up_1=src-(Multiplier_1*atr_1)
+up1_1 = nz(up_1[1],up_1)
+up_1 := close[1] > up1_1 ? max(up_1,up1_1) : up_1
+dn_1=src+(Multiplier_1*atr_1)
+dn1_1 = nz(dn_1[1], dn_1)
+dn_1 := close[1] < dn1_1 ? min(dn_1, dn1_1) : dn_1
+trend_1 = 1
+trend_1 := nz(trend_1[1], trend_1)
+trend_1 := trend_1 == -1 and close > dn1_1 ? 1 : trend_1 == 1 and close < up1_1 ? -1 : trend_1
+
+upPlot_1 = plot(trend_1 == 1 ? up_1 : na, title="Up Trend", style=plot.style_linebr, linewidth=0, color=color.rgb(0,100,0))
+buySignal_1 = trend_1 == 1 and trend_1[1] == -1
+//plotshape(buySignal_1 ? up_1 : na, title="UpTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green)
+dnPlot_1 = plot(trend_1 == 1 ? na : dn_1, title="Down Trend", style=plot.style_linebr, linewidth=0, color=color.rgb(100,0,0))
+sellSignal_1 = trend_1 == -1 and trend_1[1] == 1
+//plotshape(sellSignal_1 ? dn_1 : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red)
+mPlot_1 = plot(ohlc4, title="", style=plot.style_circles, linewidth=0)
+
+atr2_2 = sma(tr, Periods_2)
+atr_2= changeATR ? atr(Periods_2) : atr2_2
+up_2=src-(Multiplier_2*atr_2)
+up1_2 = nz(up_2[1],up_2)
+up_2 := close[1] > up1_2 ? max(up_2,up1_2) : up_2
+dn_2=src+(Multiplier_2*atr_2)
+dn1_2 = nz(dn_2[1], dn_2)
+dn_2 := close[1] < dn1_2 ? min(dn_2, dn1_2) : dn_2
+trend_2 = 1
+trend_2 := nz(trend_2[1], trend_2)
+trend_2 := trend_2 == -1 and close > dn1_2 ? 1 : trend_2 == 1 and close < up1_2 ? -1 : trend_2
+
+upPlot_2 = plot(trend_2 == 1 ? up_2 : na, title="Up Trend", style=plot.style_linebr, linewidth=0, color=color.rgb(0,125,0))
+buySignal_2 = trend_2 == 1 and trend_2[1] == -1
+//plotshape(buySignal_2 ? up_2 : na, title="UpTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green)
+dnPlot_2 = plot(trend_2 == 1 ? na : dn_2, title="Down Trend", style=plot.style_linebr, linewidth=0, color=color.rgb(125,0,0))
+sellSignal_2 = trend_2 == -1 and trend_2[1] == 1
+//plotshape(sellSignal_2 ? dn_2 : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red)
+mPlot_2 = plot(ohlc4, title="", style=plot.style_circles, linewidth=0)
+
+
+atr2_3 = sma(tr, Periods_3)
+atr_3= changeATR ? atr(Periods_3) : atr2_3
+up_3=src-(Multiplier_3*atr_3)
+up1_3 = nz(up_3[1],up_3)
+up_3 := close[1] > up1_3 ? max(up_3,up1_3) : up_3
+dn_3=src+(Multiplier_3*atr_3)
+dn1_3 = nz(dn_3[1], dn_3)
+dn_3 := close[1] < dn1_3 ? min(dn_3, dn1_3) : dn_3
+trend_3 = 1
+trend_3 := nz(trend_3[1], trend_3)
+trend_3 := trend_3 == -1 and close > dn1_3 ? 1 : trend_3 == 1 and close < up1_3 ? -1 : trend_3
+
+upPlot_3 = plot(trend_3 == 1 ? up_3 : na, title="Up Trend 3", style=plot.style_linebr, linewidth=0, color=color.rgb(0,150,0))
+buySignal_3 = trend_3 == 1 and trend_3[1] == -1
+//plotshape(buySignal_3 ? up_3 : na, title="UpTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green)
+dnPlot_3 = plot(trend_3 == 1 ? na : dn_3, title="Down Trend", style=plot.style_linebr, linewidth=0, color=color.rgb(150,0,0))
+sellSignal_3 = trend_3 == -1 and trend_3[1] == 1
+//plotshape(sellSignal_3 ? dn_3 : na, title="DownTrend Begins", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red)
+mPlot_3 = plot(ohlc4, title="", style=plot.style_circles, linewidth=0)
+
+
+
+//changeCond = trend != trend[1]
+
+//plotshape(buySignal and showsignals ? up : na, title="Buy", text="Buy", location=location.absolute, style=shape.labelup, size=size.tiny, color=color.green, textcolor=color.white, transp=0)
+//plotshape(sellSignal and showsignals ? dn : na, title="Sell", text="Sell", location=location.absolute, style=shape.labeldown, size=size.tiny, color=color.red, textcolor=color.white, transp=0)
+
+
+//emaplot = input (true, title="Show EMA on chart")
+//len = input(8, minval=1, title="ema Length")
+//sma_src = close
+//out = ema(sma_src, len)
+//up = out > out[1]
+//down = out < out[1]
+//mycolor = up ? color.green : down ? color.red : color.blue
+//plot(out and emaplot ? out :na, title="EMA", color=mycolor, linewidth=1)
+
+
+smaplot = input (false, title="Show SMA on chart")
+len2 = input(8, minval=1, title="sma Length")
+sma_src2 = close
+// out2 = sma(sma_src2, len2)
+// up2 = out2 > out2[1]
+// down2 = out2 < out2[1]
+
+// mycolor2 = up2 ? color.green : down2 ? color.red : color.blue
+// plot(out2 and smaplot ? out2 :na , title="SMA", color=mycolor2, linewidth=1)
+
+// lenA = input(10, minval=1, title="SMA #A")
+// sma_srcA = input(close, title="SMA Source #A")
+// outA = sma(sma_srcA, lenA)
+// plot(outA, title="SMA #A", color=close >= outA ? color.yellow : color.yellow, linewidth = 1)
+
+// lenB = input(20, minval=1, title="SMA #B")
+// sma_srcB = input(close, title="SMA Source #B")
+// outB = sma(sma_srcB, lenB)
+// plot(outB, title="SMA #B", color=close >= outB ? color.orange : color.orange, linewidth = 1)
+
+// lenC = input(50, minval=1, title="SMA #C")
+// sma_srcC = input(close, title="SMA Source #C")
+// outC = sma(sma_srcC, lenC)
+// plot(outC, title="SMA #C", color=close >= outC ? color.red : color.red, linewidth = 1)
+
+lenH55 = input(55, minval=1, title="HMA #H55")
+sma_srcH55 = input(close, title="HMA Source #H55")
+outH55 = hma(sma_srcH55, lenH55)
+plot(outH55, title="SMA #H55", color=close >= outH55 ? ( outH55 > outH55[1] ? color.lime : (close > outH55 ? color.white : color.silver) ) :  color.gray, linewidth = 1)
+
+lenD = input(100, minval=1, title="SMA #D")
+sma_srcD = input(close, title="SMA Source #D")
+outD = sma(sma_srcD, lenD)
+plot(outD, title="SMA #D", color=close >= outD ? color.fuchsia : color.red, linewidth = 1)
+
+lenE = input(200, minval=1, title="SMA #E")
+sma_srcE = input(close, title="SMA Source #E")
+outE = sma(sma_srcE, lenE)
+plot(outE, title="SMA #E", color=close >= outE ? color.white : color.silver, linewidth = 1)
+
+
+
+
+plotshape( (trend_1 > 0 and trend_2 > 0 and trend_3 > 0) and (buySignal_1 or buySignal_2 or buySignal_3) and close > outE ? up_3 : na, title="UpTrend Begins", location=location.absolute, style=shape.triangleup, size=size.tiny, color=color.green)
+plotshape( (trend_1 < 0 and trend_2 < 0 and trend_3 < 0) and (sellSignal_1 or sellSignal_2 or sellSignal_3) ? dn_3 : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=color.red)
+
+
+col = (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)  and close > outE ? color.lime : color.red
+bgcolor(col, transp = 95)
+
+
+
+
+
+
