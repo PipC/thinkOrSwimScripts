@@ -100,4 +100,4 @@ def CCU_D = if concavity == 1 and HMA <= HMA[1] then HMA else nan;
 def MA100 = MovingAverage(AverageType.SIMPLE, price[0], 100);
 def MA200 = MovingAverage(AverageType.SIMPLE, price[0], 200);
 
-plot scan = if !isNaN(CCU_D) and CCU_D < close and close > MA200 and MA100<MA200 then 1 else 0;
+plot scan = if !isNaN(CCU_D) and CCU_D < close and close > MA100 and MA100>=MA200 then 1 else 0;
