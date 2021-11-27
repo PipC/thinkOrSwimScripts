@@ -1,0 +1,208 @@
+//@version=3
+// Constructs the trailing ATR stop above or below the price, and switches
+// directions when the source price breaks the ATR stop. Uses the Average
+// Directional Index (ADX) to switch between ATR multipliers. The higher
+// multiplier is used when the ADX is rising, and the lower ATR multiplier
+// is used with the ADX is falling. This ADX criteria further widens the gap 
+// between the source price and the trailing ATR stop when the price is trending,
+// and lessens the gap between the ATR and the price when then price is not
+// trending.
+//
+// The ATR-ADX stop is effectively a double adapative stop that trails the price,
+// by both adapting to the true range of the price, and the average directional
+// change. When the stop is below the price (long trade) the value never decreases
+// until the price intersects the stop, and it reverses to being above the price
+// (short trade). When the stop is above the price it will never increase until
+// it is intersected by the price. As the true range and ADX change, the stop
+// will move more quickly or more slowly.
+
+// http://www.fxtsp.com/1287-doubly-adaptive-profit-average-true-range-objectives/
+
+study(title = "ATR-ADX-MA Trend Multi-Timeframe", shorttitle = "ATR-ADX-MA Multi", overlay = true)
+
+//Mode
+//Part: ATR
+src = input(ohlc4, title = "MA Source")
+atrLen = input(title = "ATR", type = integer, defval = 14, minval = 1, maxval = 100)
+m1 = input(title = "ATR Multiplier - ADX Rising", type = float, defval = 3.5, minval = 1, step = 0.1, maxval = 100)
+m2 = input(title = "ATR Multiplier - ADX Falling", type = float, defval = 1.75, minval = 1, step = 0.1, maxval = 100)
+dintval = input(title = "Inverval (i.e. 15, 60, 240, D, W)", defval = '60')
+useIntval = input(false, title = "Use Chart Interval")
+
+bandHalfWidth = input(1, title = "Band Pip/Tick Size Around Stop", minval = 0)
+showBand = input(false, title = "Use Band Around Stop?")
+ 
+adxLen = input(title = "ADX", type = integer, defval = 14, minval = 1, maxval = 100)
+adxThresh = input(title = "ADX Threshold", type = integer, defval = 25, minval = 1)
+aboveThresh = input(true, title = "ADX Above Threshold uses ATR Falling Multiplier Even if Rising?")
+useHeikin = input(false, title = "Use Heikin-Ashi Bars (Source will be ohlc4)")
+    
+//Part: MA + BG
+needlong = input(true, defval = true, title = "Long")
+needshort = input(true, defval = true, title = "Short")
+capital = input(100, defval = 100, minval = 1, maxval = 1000, title = "Capital, %")
+len = input(20, minval = 2, title = "MA Length")
+limitmode = input(false)
+fromyear = input(1900, defval = 1900, minval = 1900, maxval = 2100, title = "From Year")
+toyear = input(2100, defval = 2100, minval = 1900, maxval = 2100, title = "To Year")
+frommonth = input(01, defval = 01, minval = 01, maxval = 12, title = "From Month")
+tomonth = input(12, defval = 12, minval = 01, maxval = 12, title = "To Month")
+fromday = input(01, defval = 01, minval = 01, maxval = 31, title = "From day")
+today = input(31, defval = 31, minval = 01, maxval = 31, title = "To day") 
+
+//Start MA + BG
+
+//MA + BG
+atr = sma(tr, len) * 2
+ma = sma(src, len)
+plot(ma, color = color.blue, linewidth = 4)
+trend = 0
+trend := low > ma + atr ? 1 : high < ma - atr ? -1 : trend[1]
+col = trend == 1 ? color.lime : color.red
+bgcolor(col, transp = 70)
+
+
+//End Part1
+
+
+tk = syminfo.mintick
+tickerid = syminfo.tickerid
+blockMult = tk < 0.1 and (tk != 0.01 or syminfo.pointvalue < 10 or syminfo.pointvalue * tk <= 1) and (tk != 0.001 or syminfo.pointvalue <= 1) and tk != 0.005 and tk != 0.0001 and tk != 0.0005 and tk != 0.03125 and tk != 0.015625 ? tk == 0.00005 or tk * 100 == 0.00005 ? 2 : 10 : 1
+block = tk * blockMult
+    
+atrCalc() =>    
+    // DI-Pos, DI-Neg, ADX
+    
+    hR = change(high)
+    lR = -change(low)
+    
+    dmPos = hR > lR ? max(hR, 0) : 0
+    dmNeg = lR > hR ? max(lR, 0) : 0
+    
+    sTR = tr
+    sTR := nz(sTR[1]) - nz(sTR[1]) / adxLen + tr
+    sDMPos = tr
+    sDMPos := nz(sDMPos[1]) - nz(sDMPos[1]) / adxLen + dmPos
+    sDMNeg = tr
+    sDMNeg := nz(sDMNeg[1]) - nz(sDMNeg[1]) / adxLen + dmNeg
+    
+    DIP = sDMPos / sTR * 100
+    DIN = sDMNeg / sTR * 100
+    DX = abs(DIP - DIN) / (DIP + DIN) * 100
+    adx = sma(DX, adxLen)
+    
+    // Heikin-Ashi
+    
+    xClose = ohlc4
+    xOpen = open
+    xOpen := (nz(xOpen[1]) + nz(xClose[1])) / 2
+    xHigh = max(high, max(xOpen, xClose))
+    xLow = min(low, min(xOpen, xClose))
+    
+    // Trailing ATR
+    
+    v1 = abs(xHigh - xClose[1])
+    v2 = abs(xLow - xClose[1])
+    v3 = xHigh - xLow
+    
+    trueRange = max(v1, max(v2, v3))
+    atr = useHeikin ? rma(trueRange, atrLen) : atr(atrLen)
+    
+    m = m1
+    m := rising(adx, 1) and (adx < adxThresh or not aboveThresh) ? m1 : falling(adx, 1) or (adx > adxThresh and aboveThresh) ? m2 : nz(m[1])
+    mUp = DIP >= DIN ? m : m2
+    mDn = DIN >= DIP ? m : m2
+    
+    src_ = useHeikin ? (xOpen + xHigh + xLow + xClose) / 4 : src
+    c = useHeikin ? xClose : close
+    t = useHeikin ? (xHigh + xLow) / 2 : hl2
+    
+    up = t - mUp * atr
+    dn = t + mDn * atr
+    
+    TUp = close
+    TUp := max(src_[1], max(c[1], close[1])) > TUp[1] ? max(up, TUp[1]) : up
+    TDown = close
+    TDown := min(src_[1], min(c[1], close[1])) < TDown[1] ? min(dn, TDown[1]) : dn
+    
+    trend = 1
+    trend := min(src_, min(c, close)) > TDown[1] ? 1 : max(src_, max(c, close)) < TUp[1]? -1 : nz(trend[1], 1)
+    
+    // ceil positive trend to nearest pip/tick, floor negative trend to nearest pip/tick
+    stop = trend == 1 ? ceil(TUp / block) * block : floor(TDown / block) * block
+    trendChange = change(trend)
+    
+    [adx, trend, stop, trendChange]
+
+[adx, _trend, _stop, _trendChange] = atrCalc()
+
+start = security(tickerid, dintval, time, lookahead = true)
+newSession = iff(change(start), 1, 0)
+sinceNew = barssince(newSession)
+
+// Fixes intervals that are uneven, i.e. 120 on normal 6.5 hour NYSE day
+// This will happen if a 2H interval closes at 4:00 EST but opened at 3:30
+// EST. This is a new session candle. The 9:30 open the next day will also
+// be a new session candle, which shouldn't happen. There should never be
+// 2 consecutive candles that are new session candles, unless the indicator
+// interval is less than or equal to the chart interval. If there are 3
+// consecutive candles where each candle is a new session, then the chart
+// interval is <= the declared indicator interval.
+isChartIntval = sinceNew == 0 and sinceNew[1] == 0 and sinceNew[2] == 0
+
+trend = useIntval or isChartIntval ? _trend : security(tickerid, dintval, _trend[1], lookahead = true)
+stop = useIntval or isChartIntval ? _stop : security(tickerid, dintval, _stop[1], lookahead = true)
+trendChange = useIntval or isChartIntval ? _trendChange : security(tickerid, dintval, _trendChange[1], lookahead = true)
+
+// Plot
+
+upC = #00FF00DD
+dnC = #FF0000DD
+upC2 = #00FF0037
+dnC2 = #FF000037
+trans = #00000000
+
+lineColor = not(trendChange) or trendChange[1] ? trend > 0 ? upC : dnC : trans
+fillColor = not(trendChange) or trendChange[1] ? trend > 0 ? upC2 : dnC2 : trans
+
+// Can't figure out any other way to solve this issue for fixing a problem where
+// the indicator interval is greater than the chart interval, and the indicator is
+// not divisible by the chart interval without a remainder.
+oddIntervalTest = (lineColor[1] == upC and lineColor[0] == dnC) or (lineColor[1] == dnC and lineColor[0] == upC)
+stopColor = oddIntervalTest ? trans : lineColor
+trendChangeReal = stopColor == trans
+shapeColor = trendChangeReal ? trend > 0 ? #00FF00F8 : #FF0000F8 : trans
+
+upperBand = stop + bandHalfWidth * block
+lowerBand = stop - bandHalfWidth * block
+
+stopPlot = plot(stop, color = stopColor, title = "ATR-ADX Trend")
+upper = plot(showBand ? upperBand : na, color = oddIntervalTest ? trans : lineColor, style = circles)
+lower = plot(showBand ? lowerBand : na, color = oddIntervalTest ? trans : lineColor, style = circles)
+
+fill(upper, stopPlot, title = "ATR Band Fill - Upper", color = fillColor)
+fill(lower, stopPlot, title = "ATR Band Fill - Lower", color = fillColor)
+
+plotshape(trendChangeReal ? stop : na, style = shape.circle, size = size.tiny, location = location.absolute, color = shapeColor, title = "Trend Change")
+
+// alerts
+
+//alertcondition(trendChangeReal and trend > 0, "Adaptive ATR-ADX Trend Change Up", "Adaptive ATR-ADX Trend Change Up")
+//alertcondition(trendChangeReal and trend < 0, "Adaptive ATR-ADX Trend Change Down", "Adaptive ATR-ADX Trend Change Down")
+//alertcondition(not trendChangeReal and ((crossunder(low, stop) and trend > 0) or (crossover(high, stop) and trend < 0)), "Adaptive ATR-ADX Trend Retest", "Adaptive ATR-ADX Trend Retest")
+
+// end ATR
+
+//Trading MA
+lot = 0.0
+lot := strategy.position_size != strategy.position_size[1] ? strategy.equity / close * capital / 100 : lot[1]
+if trend == 1 and limitmode == false
+    strategy.entry("Long", strategy.long, needlong == false ? 0 : lot, when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+if trend == -1 and limitmode == false
+    strategy.entry("Short", strategy.short, needshort == false ? 0 : lot, when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+if trend == 1 and limitmode
+    strategy.entry("Long", strategy.long, needlong == false ? 0 : lot, limit = ma[1], when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+if trend == -1 and limitmode
+    strategy.entry("Short", strategy.short, needshort == false ? 0 : lot, limit = ma[1], when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+if time > timestamp(toyear, tomonth, today, 23, 59)
+    strategy.close_all()

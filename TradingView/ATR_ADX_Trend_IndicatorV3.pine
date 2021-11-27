@@ -1,0 +1,348 @@
+//2019
+//Noro
+
+//@version=4
+strategy(title = "MA+ATR+ADX+PP Strategy", shorttitle = "MA+ATR+ADX str", overlay = true, default_qty_type = strategy.percent_of_equity, default_qty_value = 5, pyramiding = 0)
+
+src = input(ohlc4, title = "MA Source")
+
+//part 1- parameters
+needlong = input(true, defval = true, title = "Buy")
+needshort = input(true, defval = true, title = "Sell")
+capital = input(10, defval = 10, minval = 1, maxval = 1000, title = "Capital, %")
+len = input(30, minval = 2, title = "MA Length")
+
+limitmode = input(false)
+fromyear = input(1900, defval = 1900, minval = 1900, maxval = 2100, title = "From Year")
+toyear = input(2100, defval = 2100, minval = 1900, maxval = 2100, title = "To Year")
+frommonth = input(01, defval = 01, minval = 01, maxval = 12, title = "From Month")
+tomonth = input(12, defval = 12, minval = 01, maxval = 12, title = "To Month")
+fromday = input(01, defval = 01, minval = 01, maxval = 31, title = "From day")
+today = input(31, defval = 31, minval = 01, maxval = 31, title = "To day")
+
+
+
+//part 2- parameters
+atrLen = input(title = "ATR", type = input.integer, defval = 14, minval = 1, maxval = 100)
+m1 = input(title = "ATR Multiplier - ADX Rising", type = input.float, defval = 3.5, minval = 1, step = 0.1, maxval = 100)
+m2 = input(title = "ATR Multiplier - ADX Falling", type = input.float, defval = 1.75, minval = 1, step = 0.1, maxval = 100)
+dintval = input(title = "Inverval (i.e. 15, 60, 240, D, W)", defval = '60')
+useIntval = input(false, title = "Use Chart Interval")
+
+bandHalfWidth = input(1, title = "Band Pip/Tick Size Around Stop", minval = 0)
+showBand = input(false, title = "Use Band Around Stop?")
+
+adxLen = input(title = "ADX", type = input.integer, defval = 14, minval = 1, maxval = 100)
+adxThresh = input(title = "ADX Threshold", type = input.integer, defval = 25, minval = 1)
+aboveThresh = input(true, title = "ADX Above Threshold uses ATR Falling Multiplier Even if Rising?")
+useHeikin = input(false, title = "Use Heikin-Ashi Bars (Source will be ohlc4)")
+
+//--part 2 ATR-ADX
+
+// part 3
+useCurrentRes = input(true, title="Use Current Chart Resolution?")
+resCustom = input(title="Use Different Timeframe? Uncheck Box Above", type=input.resolution, defval="D")
+len1 = input(20, title="Moving Average Length - LookBack Period")
+//periodT3 = input(defval=7, title="Tilson T3 Period", minval=1)
+factorT3 = input(defval=7, title="Tilson T3 Factor - *.10 - so 7 = .7 etc.", minval=0)
+atype = input(1,minval=1,maxval=8,title="1=SMA, 2=EMA, 3=WMA, 4=HullMA, 5=VWMA, 6=RMA, 7=TEMA, 8=Tilson T3")
+spc=input(false, title="Show Price Crossing 1st Mov Avg - Highlight Bar?")
+cc = input(true,title="Change Color Based On Direction?")
+smoothe = input(2, minval=1, maxval=10, title="Color Smoothing - Setting 1 = No Smoothing")
+doma2 = input(false, title="Optional 2nd Moving Average")
+spc2=input(false, title="Show Price Crossing 2nd Mov Avg?")
+len2 = input(50, title="Moving Average Length - Optional 2nd MA")
+sfactorT3 = input(defval=7, title="Tilson T3 Factor - *.10 - so 7 = .7 etc.", minval=0)
+atype2 = input(1,minval=1,maxval=8,title="1=SMA, 2=EMA, 3=WMA, 4=HullMA, 5=VWMA, 6=RMA, 7=TEMA, 8=Tilson T3")
+cc2 = input(true,title="Change Color Based On Direction 2nd MA?")
+warn = input(false, title="***You Can Turn On The Show Dots Parameter Below Without Plotting 2nd MA to See Crosses***")
+warn2 = input(false, title="***If Using Cross Feature W/O Plotting 2ndMA - Make Sure 2ndMA Parameters are Set Correctly***")
+sd = input(false, title="Show Dots on Cross of Both MA's")
+//
+
+// part 4 - moving average
+lenMA10 = input(10, minval=1, title="Length")
+lenMA50 = input(50, minval=1, title="Length")
+lenMA200 = input(200, minval=1, title="Length")
+offset = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+outMA10 = sma(src, lenMA10)
+outMA50 = sma(src, lenMA50)
+outMA200 = sma(src, lenMA200)
+plot(outMA10, color=color.yellow, title="MA10", offset=offset, linewidth=2, transp=70, style=plot.style_line)
+plot(outMA50, color=color.orange, title="MA50", offset=offset, linewidth=2, transp=70, style=plot.style_line)
+plot(outMA200, color=color.red, title="MA200", offset=offset, linewidth=2, transp=70, style=plot.style_line)
+// part 4 end
+
+tk = syminfo.mintick
+blockMult = tk < 0.1 and (tk != 0.01 or syminfo.pointvalue < 10 or syminfo.pointvalue * tk <= 1) and (tk != 0.001 or syminfo.pointvalue <= 1) and tk != 0.005 and tk != 0.0001 and tk != 0.0005 and tk != 0.03125 and tk != 0.015625 ? tk == 0.00005 or tk * 100 == 0.00005 ? 2 : 10 : 1
+block = tk * blockMult
+
+atrCalc() =>
+    // DI-Pos, DI-Neg, ADX
+
+    hR = change(high)
+    lR = -change(low)
+
+    dmPos = hR > lR ? max(hR, 0) : 0
+    dmNeg = lR > hR ? max(lR, 0) : 0
+
+    sTR = tr
+    sTR := nz(sTR[1]) - nz(sTR[1]) / adxLen + tr
+    sDMPos = tr
+    sDMPos := nz(sDMPos[1]) - nz(sDMPos[1]) / adxLen + dmPos
+    sDMNeg = tr
+    sDMNeg := nz(sDMNeg[1]) - nz(sDMNeg[1]) / adxLen + dmNeg
+
+    DIP = sDMPos / sTR * 100
+    DIN = sDMNeg / sTR * 100
+    DX = abs(DIP - DIN) / (DIP + DIN) * 100
+    adx = sma(DX, adxLen)
+
+    // Heikin-Ashi
+
+    xClose = ohlc4
+    xOpen = open
+    xOpen := (nz(xOpen[1]) + nz(xClose[1])) / 2
+    xHigh = max(high, max(xOpen, xClose))
+    xLow = min(low, min(xOpen, xClose))
+
+    // Trailing ATR
+
+    v1 = abs(xHigh - xClose[1])
+    v2 = abs(xLow - xClose[1])
+    v3 = xHigh - xLow
+
+    trueRange = max(v1, max(v2, v3))
+    atr = useHeikin ? rma(trueRange, atrLen) : atr(atrLen)
+
+    m = m1
+    m := rising(adx, 1) and (adx < adxThresh or not aboveThresh) ? m1 : falling(adx, 1) or (adx > adxThresh and aboveThresh) ? m2 : nz(m[1])
+    mUp = DIP >= DIN ? m : m2
+    mDn = DIN >= DIP ? m : m2
+
+    src_ = useHeikin ? (xOpen + xHigh + xLow + xClose) / 4 : src
+    c = useHeikin ? xClose : close
+    t = useHeikin ? (xHigh + xLow) / 2 : hl2
+
+    up = t - mUp * atr
+    dn = t + mDn * atr
+
+    TUp = close
+    TUp := max(src_[1], max(c[1], close[1])) > TUp[1] ? max(up, TUp[1]) : up
+    TDown = close
+    TDown := min(src_[1], min(c[1], close[1])) < TDown[1] ? min(dn, TDown[1]) : dn
+
+    trend = 1
+    trend := min(src_, min(c, close)) > TDown[1] ? 1 : max(src_, max(c, close)) < TUp[1]? -1 : nz(trend[1], 1)
+
+    // ceil positive trend to nearest pip/tick, floor negative trend to nearest pip/tick
+    stop = trend == 1 ? ceil(TUp / block) * block : floor(TDown / block) * block
+    trendChange = change(trend)
+
+    [adx, trend, stop, trendChange]
+
+[adx, _trend, _stop, _trendChange] = atrCalc()
+
+start = security(syminfo.tickerid, dintval, time, lookahead = true)
+newSession = iff(change(start), 1, 0)
+sinceNew = barssince(newSession)
+
+// Fixes intervals that are uneven, i.e. 120 on normal 6.5 hour NYSE day
+// This will happen if a 2H interval closes at 4:00 EST but opened at 3:30
+// EST. This is a new session candle. The 9:30 open the next day will also
+// be a new session candle, which shouldn't happen. There should never be
+// 2 consecutive candles that are new session candles, unless the indicator
+// interval is less than or equal to the chart interval. If there are 3
+// consecutive candles where each candle is a new session, then the chart
+// interval is <= the declared indicator interval.
+isChartIntval = sinceNew == 0 and sinceNew[1] == 0 and sinceNew[2] == 0
+
+trend = useIntval or isChartIntval ? _trend : security(syminfo.tickerid, dintval, _trend[1], lookahead = true)
+stop = useIntval or isChartIntval ? _stop : security(syminfo.tickerid, dintval, _stop[1], lookahead = true)
+trendChange = useIntval or isChartIntval ? _trendChange : security(syminfo.tickerid, dintval, _trendChange[1], lookahead = true)
+
+// Plot
+
+upC = #00FF00DD
+dnC = #FF0000DD
+upC2 = #00FF0037
+dnC2 = #FF000037
+trans = #00000000
+
+lineColor = not(trendChange) or trendChange[1] ? trend > 0 ? upC : dnC : trans
+fillColor = not(trendChange) or trendChange[1] ? trend > 0 ? upC2 : dnC2 : trans
+
+// Can't figure out any other way to solve this issue for fixing a problem where
+// the indicator interval is greater than the chart interval, and the indicator is
+// not divisible by the chart interval without a remainder.
+oddIntervalTest = (lineColor[1] == upC and lineColor[0] == dnC) or (lineColor[1] == dnC and lineColor[0] == upC)
+stopColor = oddIntervalTest ? trans : lineColor
+trendChangeReal = stopColor == trans
+shapeColor = trendChangeReal ? trend > 0 ? #00FF00F8 : #FF0000F8 : trans
+
+upperBand = stop + bandHalfWidth * block
+lowerBand = stop - bandHalfWidth * block
+
+stopPlot = plot(stop, color = stopColor, title = "ATR-ADX Trend")
+upper = plot(showBand ? upperBand : na, color = oddIntervalTest ? trans : lineColor, style = plot.style_circles)
+lower = plot(showBand ? lowerBand : na, color = oddIntervalTest ? trans : lineColor, style = plot.style_circles)
+
+fill(upper, stopPlot, title = "ATR Band Fill - Upper", color = fillColor)
+fill(lower, stopPlot, title = "ATR Band Fill - Lower", color = fillColor)
+
+plotshape(trendChangeReal ? stop : na, style = shape.circle, size = size.tiny, location = location.absolute, color = shapeColor, title = "Trend Change")
+
+// alerts
+
+// alertcondition(trendChangeReal and trend > 0, "Adaptive ATR-ADX Trend Change Up", "Adaptive ATR-ADX Trend Change Up")
+// alertcondition(trendChangeReal and trend < 0, "Adaptive ATR-ADX Trend Change Down", "Adaptive ATR-ADX Trend Change Down")
+// alertcondition(not trendChangeReal and ((crossunder(low, stop) and trend > 0) or (crossover(high, stop) and trend < 0)), "Adaptive ATR-ADX Trend Retest", "Adaptive ATR-ADX Trend Retest")
+
+
+//MA + BG
+atr = sma(tr, len) * 2
+ma = sma(src, len)
+plot(ma, color = color.blue, linewidth = 1, transp=50)
+//trend = 1
+trend := low > ma + atr ? 1 : high < ma - atr ? -1 : trend[1]
+col = trend == 1 ? color.lime : color.red
+bgcolor(col, transp = 90)
+
+//Trading
+//lot = 0.0
+//lot := strategy.position_size != strategy.position_size[1] ? strategy.equity / close * capital / 100 : lot[1]
+// if trend == 1 and limitmode == false
+//     strategy.entry("MAL", strategy.long, needlong == false ? 0 : lot, when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if trend == -1 and limitmode == false
+//     strategy.entry("MAS", strategy.short, needshort == false ? 0 : lot, when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if trend == 1 and limitmode
+//     strategy.entry("MAL", strategy.long, needlong == false ? 0 : lot, limit = ma[1], when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if trend == -1 and limitmode
+//     strategy.entry("MAS", strategy.short, needshort == false ? 0 : lot, limit = ma[1], when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if time > timestamp(toyear, tomonth, today, 23, 59)
+//     strategy.close_all()
+
+// end
+leftBars = input(4)
+rightBars = input(2)
+swh = pivothigh(leftBars, rightBars)
+swl = pivotlow(leftBars, rightBars)
+swh_cond = not na(swh)
+hprice = 0.0
+hprice := swh_cond ? swh : hprice[1]
+le = false
+le := swh_cond ? true : (le[1] and high > hprice ? false : le[1])
+swl_cond = not na(swl)
+lprice = 0.0
+lprice := swl_cond ? swl : lprice[1]
+se = false
+se := swl_cond ? true : (se[1] and low < lprice ? false : se[1])
+
+// if (le)
+// 	strategy.entry("PPB", strategy.long, comment="PPB", stop=hprice + syminfo.mintick)
+// if (se)
+// 	strategy.entry("PPS", strategy.short, comment="PPS", stop=lprice - syminfo.mintick)
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+
+
+// if trend == 1 and limitmode == false and trendChangeReal and trend > 0 and le
+//     strategy.entry("MAL", strategy.long, needlong == false ? 0 : lot, when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if trend == -1 and limitmode == false
+//     strategy.entry("MAS", strategy.short, needshort == false ? 0 : lot, when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if trend == 1 and limitmode
+//     strategy.entry("MAL", strategy.long, needlong == false ? 0 : lot, limit = ma[1], when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if trend == -1 and limitmode
+//     strategy.entry("MAS", strategy.short, needshort == false ? 0 : lot, limit = ma[1], when=(time > timestamp(fromyear, frommonth, fromday, 00, 00) and time < timestamp(toyear, tomonth, today, 23, 59)))
+// if time > timestamp(toyear, tomonth, today, 23, 59)
+//     strategy.close_all()
+
+//part3 start
+res = useCurrentRes ? timeframe.period : resCustom
+//hull ma definition
+hullma = wma(2*wma(src, len1/2)-wma(src, len1), round(sqrt(len1)))
+//TEMA definition
+ema1 = ema(src, len1)
+ema2 = ema(ema1, len1)
+ema3 = ema(ema2, len1)
+tema = 3 * (ema1 - ema2) + ema3
+
+//Tilson T3
+factor = factorT3 *.10
+gd(src, len1, factor) => ema(src, len1) * (1 + factor) - ema(ema(src, len1), len1) * factor
+t3(src, len1, factor) => gd(gd(gd(src, len1, factor), len1, factor), len1, factor)
+tilT3 = t3(src, len1, factor)
+
+
+avg = atype == 1 ? sma(src,len1) : atype == 2 ? ema(src,len1) : atype == 3 ? wma(src,len1) : atype == 4 ? hullma : atype == 5 ? vwma(src, len1) : atype == 6 ? rma(src,len1) : atype == 7 ? 3 * (ema1 - ema2) + ema3 : tilT3
+//2nd Ma - hull ma definition
+hullma2 = wma(2*wma(src, len2/2)-wma(src, len2), round(sqrt(len2)))
+//2nd MA TEMA definition
+sema1 = ema(src, len2)
+sema2 = ema(sema1, len2)
+sema3 = ema(sema2, len2)
+stema = 3 * (sema1 - sema2) + sema3
+
+//2nd MA Tilson T3
+sfactor = sfactorT3 *.10
+sgd(src, len2, sfactor) => ema(src, len2) * (1 + sfactor) - ema(ema(src, len2), len2) * sfactor
+st3(src, len2, sfactor) => sgd(sgd(gd(src, len2, sfactor), len2, sfactor), len2, sfactor)
+stilT3 = st3(src, len2, sfactor)
+
+avg2 = atype2 == 1 ? sma(src,len2) : atype2 == 2 ? ema(src,len2) : atype2 == 3 ? wma(src,len2) : atype2 == 4 ? hullma2 : atype2 == 5 ? vwma(src, len2) : atype2 == 6 ? rma(src,len2) : atype2 == 7 ? 3 * (ema1 - ema2) + ema3 : stilT3
+
+out = avg
+out_two = avg2
+
+out1 = security(syminfo.tickerid, res, out)
+out2 = security(syminfo.tickerid, res, out_two)
+
+//Formula for Price Crossing Moving Average #1
+cr_up = open < out1 and close > out1
+cr_Down = open > out1 and close < out1
+//Formula for Price Crossing Moving Average #2
+cr_up2 = open < out2 and close > out2
+cr_Down2 = open > out2 and close < out2
+//barcolor Criteria for Price Crossing Moving Average #1
+iscrossUp() => cr_up
+iscrossDown() => cr_Down
+//barcolor Criteria for Price Crossing Moving Average #2
+iscrossUp2() => cr_up2
+iscrossDown2() => cr_Down2
+
+ma_up = out1 >= out1[smoothe]
+ma_down = out1 < out1[smoothe]
+
+col1 = cc ? ma_up ? color.lime : ma_down ? color.red : color.aqua : color.aqua
+col2 = cc2 ? ma_up ? color.lime : ma_down ? color.red : color.aqua : color.white
+
+circleYPosition = out2
+
+plot(out1, title="Multi-Timeframe Moving Avg", style=line.style_solid, linewidth=2, color = col1, transp=60)
+plot(doma2 and out2 ? out2 : na, title="2nd Multi-TimeFrame Moving Average", style=plot.style_circles, linewidth=4, color=col2)
+plot(sd and cross(out1, out2) ? circleYPosition : na,style=shape.cross, linewidth=15, color=color.aqua)
+//barcolor Plot for Price Crossing Moving Average #1
+barcolor(spc and iscrossUp() ? (iscrossUp() ? color.yellow : na) : na)
+barcolor(spc and iscrossDown() ? (iscrossDown() ? color.yellow : na) : na)
+//barcolor Plot for Price Crossing Moving Average #2
+barcolor(spc2 and iscrossUp2() ? (iscrossUp2() ? color.yellow : na) : na)
+barcolor(spc2 and iscrossDown2() ? (iscrossDown2() ? color.yellow : na) : na)
+//part3 end
+
+// alertcondition(trendChangeReal and trend > 0, "Adaptive ATR-ADX Trend Change Up", "Adaptive ATR-ADX Trend Change Up")
+// alertcondition(trendChangeReal and trend < 0, "Adaptive ATR-ADX Trend Change Down", "Adaptive ATR-ADX Trend Change Down")
+// alertcondition(not trendChangeReal and ((crossunder(low, stop) and trend > 0) or (crossover(high, stop) and trend < 0)), "Adaptive ATR-ADX Trend Retest", "Adaptive ATR-ADX Trend Retest")
+
+
+
+//if (le and trendChangeReal and trend > 0 and ((trend == 1 and limitmode == false) or (trend == 1 and limitmode)))
+//	strategy.entry("Buy", strategy.long, comment="Buy", stop= hprice + syminfo.mintick)
+//if (se and trendChangeReal and trend < 0 and ((trend == -1 and limitmode == false) or (trend == -1 and limitmode)))
+//	strategy.entry("Sell", strategy.short, comment="Sell", stop=lprice - syminfo.mintick)
+
+
+if (trend > 0 and (le and trendChangeReal) or ((limitmode == false) or (limitmode)))
+	strategy.entry("Buy", strategy.long, comment="Buy", stop= hprice + syminfo.mintick)
+if (trend < 0 and (se and trendChangeReal) or ((limitmode == false) or (limitmode)))
+	strategy.entry("Sell", strategy.short, comment="Sell", stop=lprice - syminfo.mintick)
+
+
