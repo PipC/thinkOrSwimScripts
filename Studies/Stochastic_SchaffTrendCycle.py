@@ -66,9 +66,9 @@ OverSold.SetDefaultColor(GetColor(7));
 
 #STCWave.AssignValueColor(if STCWave > STCWave[1] then Color.MAGENTA else Color.CYAN);
 STCWave.AssignValueColor(
-    if STCWave >= over_bought + 20 then Color.MAGENTA else 
-    if STCWave <= over_sold - 20 then Color.CYAN else 
-    if STCWave < STCWave[1] then Color.MAGENTA 
+    if STCWave >= over_bought + 20 then Color.MAGENTA else
+    if STCWave <= over_sold - 20 then Color.CYAN else
+    if STCWave < STCWave[1] then Color.MAGENTA
     else if AvgSMI > AvgSMI[1] then Color.CYAN else Color.MAGENTA);
 STCWave.SetPaintingStrategy(PaintingStrategy.LINE);
 
@@ -105,3 +105,25 @@ STCTrendUp.SetPaintingStrategy(PaintingStrategy.POINTS);
 STCTrendUp.SetDefaultColor(Color.Green);
 STCTrendUp.SetLineWeight(3);
 
+input WTChannelLength = 10;
+input WTAverageLength = 21;
+
+def n1 = WTChannelLength;
+def n2 = WTAverageLength;
+
+def ap = HLC3;
+def esa = ExpAverage(ap, n1);
+def dx = ExpAverage(AbsValue(ap - esa), n1);
+def ci = (ap - esa) / (0.015 * dx);
+def tci = ExpAverage(ci, n2);
+
+plot wt1 = tci +50;
+plot wt2 = MovingAverage(AverageType.SIMPLE, wt1, 4);
+
+wt1.setDefaultColor(Color.dark_orange);
+wt2.setDefaultColor(Color.dark_orange);
+
+wt1.setLineWeight(1);
+wt2.setLineWeight(1);
+
+wt2.setpaintingStrategy(PaintingStrategy.POINTS);
