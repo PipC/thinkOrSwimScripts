@@ -127,3 +127,10 @@ wt1.setLineWeight(1);
 wt2.setLineWeight(1);
 
 wt2.setpaintingStrategy(PaintingStrategy.POINTS);
+
+plot wtDN = if wt2 crosses above wt1 then wt2 else Double.NaN;
+plot wtUP = if wt1 crosses above wt2 then wt2 else Double.NaN;
+
+wtDN.setPaintingStrategy(PaintingStrategy.ARROW_DOWN);
+wtUP.setPaintingStrategy(PaintingStrategy.ARROW_UP);
+
