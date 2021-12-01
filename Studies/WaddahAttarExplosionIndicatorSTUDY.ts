@@ -66,7 +66,7 @@ def trendDown = if t1 < 0 then (-1 * t1) else 0;
 plot tUp = trendUp; #"UpTrend"
 #Also try using columns to see how it looks.
 tUp.setpaintingStrategy(paintingStrategy.HISTOGRAM);
-tUp.assignValueColor(if trendUp < trendUp[1] then color.light_GREEN else
+tUp.assignValueColor(if trendUp < trendUp[1] then color.dark_GREEN else
 color.green);
 
 plot tDn = trendDown; #"DownTrend"

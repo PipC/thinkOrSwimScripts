@@ -11,9 +11,9 @@ else if buyingPowerSource == buyingPowerSource.Auto then
 else GetTotalCash();
 def totalCash = buyingPower;
 #def totalNetLiq = if cashTotal ==0 then GetNetLiq() else 0;
-def tradeSize = Round(totalCash * tradingPercentageOfCash / 100 / close, 0);
-#def tradeSizeByCache = Round(totalCash * tradingPercentageOfCash / 100 / close, 0);
-#def tradeSizeByNetLiq = Round(totalNetLiq * tradingPercentageOfCash / 100 / close, 0);
+def tradeSize = RoundDown(totalCash * tradingPercentageOfCash / 100 / close, 0);
+#def tradeSizeByCache = RoundDown(totalCash * tradingPercentageOfCash / 100 / close, 0);
+#def tradeSizeByNetLiq = RoundDown(totalNetLiq * tradingPercentageOfCash / 100 / close, 0);
 #def tradeSize = if cashTotal == 0 then (
 #    if tradeSizeByNetLiq > totalCash then tradeSizeByCache else tradeSizeByNetLiq
 #) else cashTotal;
