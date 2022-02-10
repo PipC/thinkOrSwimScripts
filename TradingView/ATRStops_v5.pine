@@ -128,10 +128,14 @@ if pos==-1 and pos[1]==1
     //if close < low[1]-syminfo.mintick
     _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
 
+
 if (stopBelowHMA55)
+    var trend = false
+    trend := (pos==1)
     var label _la55STP = na
     label.delete(_la55STP)
-    _la55STP := label.new(x=time+1, y=(((pos==1))?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",((pos==1)?outH55L:outH55H), 100*(1-((pos==1)?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
+    _la55STP := label.new(x=time+1, y=(trend?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",(trend?outH55L:outH55H), 100*(1-(trend?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
+
 
 
 var label _laSTP = na

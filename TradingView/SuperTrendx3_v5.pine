@@ -428,9 +428,11 @@ plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new
 //bgcolor(startedNewPeriod and insideLookbackRange ? #42a5f5 : na, transp=95)
 
 if (stopBelowHMA55)
+    var trend = false
+    trend := trend_1 > 0 and trend_2 > 0 and trend_3 > 0
     var label _la55STP = na
     label.delete(_la55STP)
-    _la55STP := label.new(x=time+1, y=(STBuySignal?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",(STBuySignal?outH55L:outH55H), 100*(1-(STBuySignal?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
+    _la55STP := label.new(x=time+1, y=(trend?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",(trend?outH55L:outH55H), 100*(1-(trend?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
 
 
 var label _laSTP = na
