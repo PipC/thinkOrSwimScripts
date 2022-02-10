@@ -119,7 +119,7 @@ if pos==1  and pos[1]==-1
     var label _laBUY = na
     //label.delete(_laBUY)
     //if close > high[1]+syminfo.mintick
-    _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_left)
+    _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_right)
 
 
 if pos==-1 and pos[1]==1
@@ -140,7 +140,7 @@ if (stopBelowHMA55)
 
 var label _laSTP = na
 label.delete(_laSTP)
-_laSTP := label.new(x=time+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
+_laSTP := label.new(x=timenow+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
 
 
 
