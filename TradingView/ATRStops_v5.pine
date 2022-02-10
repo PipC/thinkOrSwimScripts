@@ -115,21 +115,18 @@ if pos==-1
 if stopBelowHMA55 and ( close < outH55L) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
     strategy.exit("X55L", stop=outH55L)
 
-var Turn2BuySignal  = pos==1  and pos[1]==-1
-var Turn2SellSignal = pos==-1 and pos[1]==1
-
-if Turn2BuySignal
+if pos==1  and pos[1]==-1
     var label _laBUY = na
     //label.delete(_laBUY)
-    if close > high[1]+syminfo.mintick
-        _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_left)
+    //if close > high[1]+syminfo.mintick
+    _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_left)
 
 
-if Turn2SellSignal
+if pos==-1 and pos[1]==1
     var label _laSELL = na
     //label.delete(_laSELL)
-    if close < low[1]-syminfo.mintick
-        _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
+    //if close < low[1]-syminfo.mintick
+    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
 
 if (stopBelowHMA55)
     var label _la55STP = na
