@@ -1,0 +1,143 @@
+//@version=5
+strategy(title="ATR Stops Strategy v5", overlay = true, format=format.price,
+     precision       = 4,
+     linktoseries    = true,
+     max_bars_back   = 1000,
+     max_lines_count = 500)
+
+
+stopLossPrecent=input.float(title="Stop Loss Precentage %", step=0.5, defval=5)
+stopBelowHMA55=input.bool(title="Stop Below HMA55", defval=true)
+tradeMaxAmount = input.int(title="Trading Amount", step=1000, defval=10000)
+
+nATRPeriod = input.int(defval=5)
+nATRMultip = input.float(defval=3, step=0.5)
+nATRMultip2 = input.float(defval=2.5, step=0.1)
+
+xATR = ta.atr(nATRPeriod)
+nLoss = nATRMultip * xATR
+
+nLoss2 = nATRMultip2 * xATR
+
+xATRTrailingStop=0.0
+xATRTrailingStop := ( (close > nz(xATRTrailingStop[1], 0) and close[1] > nz(xATRTrailingStop[1], 0))? math.max(nz(xATRTrailingStop[1]), close - nLoss) :( (close < nz(xATRTrailingStop[1], 0) and close[1] < nz(xATRTrailingStop[1], 0))? math.min(nz(xATRTrailingStop[1]), close + nLoss) : ( (close > nz(xATRTrailingStop[1], 0) )? close - nLoss: close + nLoss)))
+xATRTrailingStop2=0.0
+xATRTrailingStop2 := ( (close > nz(xATRTrailingStop2[1], 0) and close[1] > nz(xATRTrailingStop2[1], 0))? math.max(nz(xATRTrailingStop2[1]), close - nLoss2) :( (close < nz(xATRTrailingStop2[1], 0) and close[1] < nz(xATRTrailingStop2[1], 0))? math.min(nz(xATRTrailingStop2[1]), close + nLoss2) : ( (close > nz(xATRTrailingStop2[1], 0) )? close - nLoss2: close + nLoss2)))
+
+pos=0.0
+pos :=	(close[1] < nz(xATRTrailingStop[1], 0) and close > nz(xATRTrailingStop[1], 0)? 1: (close[1] > nz(xATRTrailingStop[1], 0) and close < nz(xATRTrailingStop[1], 0)? -1: nz(pos[1], 0)))
+
+color = pos == -1 ? color.red: pos == 1 ? color.green : color.blue
+
+
+smaplot = input.bool(false, title="Show SMA on chart")
+len2 = input.int(8, minval=1, title="sma Length")
+sma_src2 = close
+// out2 = sma(sma_src2, len2)
+// up2 = out2 > out2[1]
+// down2 = out2 < out2[1]
+
+// mycolor2 = up2 ? color.green : down2 ? color.red : color.blue
+// plot(out2 and smaplot ? out2 :na , title="SMA", color=mycolor2, linewidth=1)
+
+// lenA = input(10, minval=1, title="SMA #A")
+// sma_srcA = input(close, title="SMA Source #A")
+// outA = sma(sma_srcA, lenA)
+// plot(outA, title="SMA #A", color=close >= outA ? color.yellow : color.yellow, linewidth = 1)
+
+// lenB = input(20, minval=1, title="SMA #B")
+// sma_srcB = input(close, title="SMA Source #B")
+// outB = sma(sma_srcB, lenB)
+// plot(outB, title="SMA #B", color=close >= outB ? color.orange : color.orange, linewidth = 1)
+
+// lenC = input(50, minval=1, title="SMA #C")
+// sma_srcC = input(close, title="SMA Source #C")
+// outC = sma(sma_srcC, lenC)
+// plot(outC, title="SMA #C", color=close >= outC ? color.red : color.red, linewidth = 1)
+
+lenH55 = input.int(55, minval=1, title="HMA #H55")
+
+sma_srcH55H = input(high, title="HMA Source #H55 High")
+outH55H = ta.hma(sma_srcH55H, lenH55)
+plot(outH55H, title="SMA #H55H", color=close >= outH55H ? ( outH55H > outH55H[1] ? color.lime : (close > outH55H ? color.white : color.silver) ) :  color.gray, linewidth = 1)
+
+sma_srcH55L = input(low, title="HMA Source #H55 Low")
+outH55L = ta.hma(sma_srcH55L, lenH55)
+plot(outH55L, title="SMA #H55L", color=close >= outH55L ? ( outH55L > outH55L[1] ? color.lime : (close > outH55L ? color.white : color.silver) ) :  color.gray, linewidth = 1)
+
+lenA = input.int(5, minval=1, title="SMA #5")
+srcA = input(close, title="SMA Source #5")
+outA = ta.sma(srcA, lenA)
+plot(outA, title="SMA #5", color=outA >= outA[1] ? color.yellow : color.yellow, linewidth = 1)
+
+lenB = input.int(20, minval=1, title="SMA #20")
+srcB = input(close, title="SMA Source #20")
+outB = ta.sma(srcB, lenB)
+plot(outB, title="SMA #20", color=outB >= outB[1] ? color.orange : color.orange, linewidth = 1)
+
+
+lenD = input.int(100, minval=1, title="EMA #100")
+ema_srcD = input(close, title="EMA Source #100")
+outD = ta.ema(ema_srcD, lenD)
+plot(outD, title="EMA #100", color=outD >= outD[1] ? color.gray : color.maroon, linewidth = 2)
+
+lenE = input.int(200, minval=1, title="EMA #200")
+ema_srcE = input(close, title="EMA Source #200")
+outE = ta.ema(ema_srcE, lenE)
+plot(outE, title="EMA #200", color=outE >= outE[1] ? color.white : color.fuchsia, linewidth = 3)
+
+bgColor = color.new((pos > 0) ? color.lime : color.red,95)
+bgcolor(bgColor)
+
+plot(xATRTrailingStop, color=color, title="ATR Trailing Stop", linewidth=2)
+
+var label _laATR = na
+label.delete(_laATR)
+_laATR := label.new(x=time+2, y=xATRTrailingStop, text=str.format("{1,number,#.#}% STP ${0,number,#.##}",xATRTrailingStop, 100*(1-xATRTrailingStop/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new((pos==1)?color.green:color.red,60), textcolor=color.white, size=size.small, style=label.style_label_left)
+
+
+plot(xATRTrailingStop2, color=color, title="ATR Trailing Stop", linewidth=1)
+
+//if ( strategy.opentrades == 0) or true
+if (pos==1) and (strategy.opentrades == 0)  and (not stopBelowHMA55 or (stopBelowHMA55 and  close > outH55H ))
+    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
+    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high+syminfo.mintick, qty=tradeMaxAmount/(high)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+
+if (pos==1) and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
+    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
+
+if pos==-1
+    strategy.exit("LX", stop=low)
+//    var label _laSELL = na
+//    label.delete(_laSELL)
+//    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("${0,number,#.#} ~ {1,number,#.##}%",xATRTrailingStop, 100*(1-xATRTrailingStop/high)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
+
+if stopBelowHMA55 and ( close < outH55L) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+    strategy.exit("X55L", stop=outH55L)
+
+var Turn2BuySignal  = pos==1  and pos[1]==-1
+var Turn2SellSignal = pos==-1 and pos[1]==1
+
+if Turn2BuySignal
+    var label _laBUY = na
+    //label.delete(_laBUY)
+    if close > high[1]+syminfo.mintick
+        _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_left)
+
+
+if Turn2SellSignal
+    var label _laSELL = na
+    //label.delete(_laSELL)
+    if close < low[1]-syminfo.mintick
+        _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
+
+if (stopBelowHMA55)
+    var label _la55STP = na
+    label.delete(_la55STP)
+    _la55STP := label.new(x=time+1, y=(((pos==1))?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",((pos==1)?outH55L:outH55H), 100*(1-((pos==1)?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
+
+
+var label _laSTP = na
+label.delete(_laSTP)
+_laSTP := label.new(x=time+2, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.gray, textcolor=color.black, size=size.small, style=label.style_label_left)
+
