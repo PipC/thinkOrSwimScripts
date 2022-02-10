@@ -141,3 +141,174 @@ var label _laSTP = na
 label.delete(_laSTP)
 _laSTP := label.new(x=time+2, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.gray, textcolor=color.black, size=size.small, style=label.style_label_left)
 
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// INPUTS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+vp_lookback   = input.int(defval = 200,
+                     title   = "Volume Lookback Depth [10-1000]",
+                     minval  = 10,
+                     maxval  = 1000)
+
+vp_max_bars   = input.int(defval = 500,
+                     title   = "Number of Bars [10-500]",
+                     minval  = 10,
+                     maxval  = 500)
+
+vp_bar_mult   = input.int(defval = 50,
+                     title   = "Bar Length Multiplier [10-100]",
+                     minval  = 10,
+                     maxval  = 100)
+
+vp_bar_offset = input.int(defval = 50,
+                     title   = "Bar Horizontal Offset [0-100]",
+                     minval  = 0,
+                     maxval  = 100)
+
+vp_bar_width  = input.int(defval = 2,
+                     title   = "Bar Width [1-20]",
+                     minval  = 1,
+                     maxval  = 20)
+
+// As suggested by @NXT2017
+vp_delta_type = input.string(defval = "Both",
+                     title   = "Delta Type",
+                     options = ['Both', 'Bullish', 'Bearish'])
+
+vp_poc_show   = input.bool(defval = true,
+                     title   = "Show POC Line")
+
+vp_bar_color  = input.color(defval = color.new(color.gray, 80) ,
+                     title   = "Bar Color")
+
+vp_poc_color  = input.color(defval = color.new(color.white, 30),
+                     title   = "POC Color")
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// VARIABLES
+///////////////////////////////////////////////////////////////////////////////////////////////////
+float vp_Vmax = 0.0
+int vp_VmaxId = 0
+int vp_N_BARS = vp_max_bars
+
+var int vp_first = time
+
+vp_a_P = array.new_float((vp_N_BARS + 1), 0.0)
+vp_a_V = array.new_float(vp_N_BARS, 0.0)
+vp_a_D = array.new_float(vp_N_BARS, 0.0)
+vp_a_W = array.new_int(vp_N_BARS, 0)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// CALCULATIONS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+float vp_HH = ta.highest(high, vp_lookback)
+float vp_LL = ta.lowest(low, vp_lookback)
+
+if barstate.islast
+	float vp_HL = (vp_HH - vp_LL) / vp_N_BARS
+    for j = 1 to (vp_N_BARS + 1)
+        array.set(vp_a_P, (j-1), (vp_LL + vp_HL * j))
+	for i = 0 to (vp_lookback - 1)
+		int Dc = 0
+		array.fill(vp_a_D, 0.0)
+		for j = 0 to (vp_N_BARS - 1)
+			float Pj = array.get(vp_a_P, j)
+			if low[i] < Pj and high[i] > Pj and (vp_delta_type == "Bullish" ?
+			 close[i] >= open[i] : (vp_delta_type == "Bearish" ? close[i] <= open[i] : true))
+				float Dj = array.get(vp_a_D, j)
+				float dDj = Dj + nz(volume[i])
+				array.set(vp_a_D, j, dDj)
+				Dc := Dc + 1
+		for j = 0 to (vp_N_BARS - 1)
+			float Vj = array.get(vp_a_V, j)
+			float Dj = array.get(vp_a_D, j)
+			float dVj = Vj + ((Dc > 0) ? (Dj / Dc) : 0.0)
+			array.set(vp_a_V, j, dVj)
+	vp_Vmax := array.max(vp_a_V)
+    vp_VmaxId := array.indexof(vp_a_V, vp_Vmax)
+    for j = 0 to (vp_N_BARS - 1)
+        float Vj = array.get(vp_a_V, j)
+        int Aj = math.round(vp_bar_mult * Vj / vp_Vmax)
+        array.set(vp_a_W, j, Aj)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// PLOTING
+///////////////////////////////////////////////////////////////////////////////////////////////////
+if barstate.isfirst
+    vp_first := time
+vp_change = ta.change(time)
+vp_x_loc = timenow + math.round(vp_change * vp_bar_offset)
+
+f_setup_bar(n) =>
+    x1 = ((vp_VmaxId == n) and vp_poc_show) ? math.max(time[vp_lookback], vp_first) :
+		 (math.round(vp_change * (vp_bar_offset - array.get(vp_a_W, n))) + timenow)
+	ys = array.get(vp_a_P, n)
+    line.new(x1     = x1,
+             y1     = ys,
+             x2     = vp_x_loc,
+             y2     = ys,
+             xloc   = xloc.bar_time,
+             extend = extend.none,
+             color  = (vp_VmaxId == n ? vp_poc_color : vp_bar_color),
+             style  = line.style_solid,
+             width  = vp_bar_width)
+
+if barstate.islast
+    for i = 0 to (vp_N_BARS - 1) by 1
+        f_setup_bar(i)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// END
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// User Options
+vwapLookbackDays = input.int(title="VWAP Anchor Lookback (days)",  defval=55)
+
+// Functions
+getTotalLookbackDays(lookbackWeekdays) =>
+    // Calculate actual lookback days from weekdays
+    int lookbackDays = lookbackWeekdays
+    int currentWeekday = dayofweek(timenow)-1
+    if (lookbackWeekdays > currentWeekday)
+        int weekdaysEachWeek = 5
+        int weekendDaysEachWeek = 2
+        int weekendsToOffset = math.ceil((lookbackWeekdays - currentWeekday) / weekdaysEachWeek)
+        int offsetWeekendDays = weekendDaysEachWeek * weekendsToOffset
+        lookbackDays := offsetWeekendDays + lookbackWeekdays
+    lookbackDays
+isNewPeriod(res) =>
+    // Helper function for finding new bars/periods by resolution
+    t = time(res)
+    newbar = not na(t) and (na(t[1]) or t > t[1])
+
+// Calculate beginning and ending range for VWAP
+int lookback = getTotalLookbackDays(vwapLookbackDays)
+milliseconds_in_lookback_days = 1000 * 60 * 60 * 24 * lookback
+leftborder = timenow - time < milliseconds_in_lookback_days
+rightborder = barstate.islast
+
+// VWAP Variables
+float cumulativePV = na
+float cumulativeVOL = na
+float multiDayVWAP = na
+bool newDay = isNewPeriod("D")
+var startedNewPeriod = false
+bool insideLookbackRange = (leftborder and not rightborder) or rightborder
+
+// Start plotting new VWAP period if it's a new day, inside our lookback range, and only if we haven't already started a new period
+bool startNewPeriod = newDay and insideLookbackRange and not startedNewPeriod
+if (startNewPeriod)
+    startedNewPeriod := true
+
+// Calculate cumulative totals & VWAP as documented below
+// VWAP Docs: https://www.investopedia.com/terms/v/vwap.asp
+cumulativePV := startNewPeriod ? (hlc3 * volume) : (cumulativePV[1] + hlc3 * volume)
+cumulativeVOL := startNewPeriod ? volume : (cumulativeVOL[1] + volume)
+multiDayVWAP := (cumulativePV / cumulativeVOL)
+
+// Plots
+plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new(#ffffff,30), linewidth=1, style=plot.style_stepline)
