@@ -312,3 +312,7 @@ multiDayVWAP := (cumulativePV / cumulativeVOL)
 
 // Plots
 plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new(#ffffff,30), linewidth=1, style=plot.style_stepline)
+
+var label _laVWAP = na
+label.delete(_laVWAP)
+_laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% VWAP ${0,number,#.##}",multiDayVWAP,(close-multiDayVWAP)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.white,80), textcolor=color.white, size=size.small, style=label.style_label_left)
