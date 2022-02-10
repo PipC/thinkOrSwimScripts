@@ -140,8 +140,7 @@ if (stopBelowHMA55)
 
 var label _laSTP = na
 label.delete(_laSTP)
-_laSTP := label.new(x=time+2, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.gray, textcolor=color.black, size=size.small, style=label.style_label_left)
-
+_laSTP := label.new(x=time+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
 
 
 
