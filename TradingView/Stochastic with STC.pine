@@ -1,0 +1,88 @@
+//@version=4
+study(title="Stochastic with STC X", shorttitle="StochX", format=format.price, precision=2, resolution="")
+periodK = input(14, title="K", minval=1)
+periodD = input(3, title="D", minval=1)
+smoothK = input(3, title="Smooth", minval=1)
+k = sma(stoch(close, high, low, periodK), smoothK)
+d = sma(k, periodD)
+
+upper = 70
+lower = 30
+middle = 50
+
+plot(k, title="%K", color=#0094FF)
+plot(d, title="%D", color=#FF6A00)
+h0 = hline(upper, "Upper Band", color=#606060)
+h1 = hline(lower, "Lower Band", color=#606060)
+hx = hline(middle, "Middle Band", color=#606060)
+fill(h0, h1, color=#9915FF, transp=95, title="Background")
+isDxK=crossover(k, d)
+isKxD=crossover(d, k)
+DxK_color = isDxK ? color.lime : color.red
+KxD_color = isKxD ? color.red : color.lime
+//signal_color = macd_IsAbove ? yellow : yellow : lime
+plot((isDxK and d<30 ) ? d : na, title="Up trend", style=plot.style_circles, linewidth=4, color=DxK_color)
+plot((isKxD and d>70) ? d : na, title="Down trend", style=plot.style_circles, linewidth=4, color=KxD_color)
+
+plotshape(crossunder(d, lower) ? d : na, title="Crossover", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green, transp=20)
+//plotshape(crossover(d, upper) ? d : na, title="Crossunder", location=location.absolute, style=shape.circle, size=size.tiny, color=color.white, transp=80)
+
+fastLength = input(title="MACD Fast Length", type=input.integer, defval=23)
+slowLength = input(title="MACD Slow Length", type=input.integer, defval=50)
+cycleLength = input(title="Cycle Length", type=input.integer, defval=10)
+d1Length = input(title="1st %D Length", type=input.integer, defval=3)
+d2Length = input(title="2nd %D Length", type=input.integer, defval=3)
+src = input(title="Source", type=input.source, defval=close)
+highlightBreakouts = input(title="Highlight Breakouts ?", type=input.bool, defval=true)
+
+macd = ema(src, fastLength) - ema(src, slowLength)
+k2 = nz(fixnan(stoch(macd, macd, macd, cycleLength)))
+d2 = ema(k2, d1Length)
+kd = nz(fixnan(stoch(d2, d2, d2, cycleLength)))
+stc = ema(kd, d2Length)
+stc := 	stc > 100 ? 100 : stc < 0 ? 0 : stc
+
+stcColor = stc > stc[1] ? color.teal : color.fuchsia
+stcPlot = plot(stc, title="STC", color=stcColor, transp=10)
+
+
+
+plotshape(crossover(stc, lower) ? stc : na, title="Crossover", location=location.absolute, style=shape.circle, size=size.tiny, color=color.teal, transp=30)
+plotshape(crossunder(stc, upper) ? stc : na, title="Crossunder", location=location.absolute, style=shape.circle, size=size.tiny, color=color.purple, transp=30)
+
+
+//WT_LB
+//
+// @author LazyBear
+//
+// If you use this code in its original/modified form, do drop me a note.
+//
+//study(title="WaveTrend [LazyBear]", shorttitle="WT_LB")
+n1 = input(10, "Channel Length")
+n2 = input(21, "Average Length")
+//obLevel1 = input(60, "Over Bought Level 1")
+//obLevel2 = input(53, "Over Bought Level 2")
+//osLevel1 = input(-60, "Over Sold Level 1")
+//osLevel2 = input(-53, "Over Sold Level 2")
+
+ap = hlc3
+esa = ema(ap, n1)
+dx = ema(abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * dx)
+tci = ema(ci, n2)
+
+wt1 = tci +50
+wt2 = sma(wt1,4)
+
+plot(0, color=color.gray)
+//plot(obLevel1, color=color.red)
+//plot(osLevel1, color=color.green)
+//plot(obLevel2, color=color.red, style=3)
+//plot(osLevel2, color=color.green, style=3)
+
+plot(wt1, color=color.orange, transp=60, style=plot.style_line)
+plot(wt2, color=color.red, transp=60, style=3)
+//plot(wt1-wt2, color=color.blue, style=plot.style_area, transp=80)
+
+//plotshape(crossover(wt1, wt2) ? wt1 : na, title="Crossover", location=location.absolute, style=shape.circle, size=size.tiny, color=color.green, transp=40)
+//plotshape(crossunder(wt1, wt2) ? wt1 : na, title="Crossunder", location=location.absolute, style=shape.circle, size=size.tiny, color=color.red, transp=40)
