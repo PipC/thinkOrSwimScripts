@@ -1,0 +1,37 @@
+//@version=5
+
+//author K?vanC @fr3762 on twitter
+//creator Goichi Hosoda
+
+
+indicator("ICHIMOKU", shorttitle="ICH", overlay=true)
+
+
+TKlength=input.int(9, "Tenkansen Length", minval=1)
+KJlength=input.int(26, "Kijunsen Length", minval=1)
+CSHSlength=input.int(26, "Chikouspan Length/Horizontal Shift", minval=1)
+SBlength=input.int(52, "SenkouspanB Length", minval=1)
+SAlength=input.int(26,"SenkouspanA Length", minval=1)
+
+TK=math.avg(ta.lowest(TKlength), ta.highest(TKlength))
+KJ=math.avg(ta.lowest(KJlength), ta.highest(KJlength))
+CS=close
+SB=math.avg(ta.lowest(SBlength), ta.highest(SBlength))
+SA=math.avg(TK,KJ)
+
+
+
+
+plot(TK, linewidth=1, color=color.blue, title="TenkanSen")
+plot(KJ, linewidth=1, color=color.red, title="KijunSen")
+
+plot(CS, offset=-CSHSlength, linewidth=1, color=color.new(color.gray,50), title="ChikouSpan")
+
+SenkouA=plot(SA, offset=CSHSlength,  linewidth=1, color=color.green, title="SenkouSpanA")
+SenkouB=plot(SB, offset=CSHSlength, linewidth=1, color=color.purple, title="SenkouSpanB")
+
+fill(SenkouA, SenkouB, color = SA > SB ? color.new(color.green,80) : color.new(color.red,80))
+
+
+
+
