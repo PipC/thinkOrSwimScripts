@@ -327,6 +327,11 @@ fill(p1, p2, color=fastMA > slowMA ? color.aqua : color.fuchsia, title='Ribbon F
 //
 plot(signalMA, color=color.new(Gold, 20), join=true, style=plot.style_circles, linewidth=2, title='Signal MA')
 
+var label _laSTPma = na
+label.delete(_laSTPma)
+_laSTPma := label.new(x=time, y=signalMA, text=str.format("{0,number,#.#}% STP ${1,number,#.##}",(close-signalMA)/close*100, signalMA), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(Gold,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laSTPma, label.get_x(_laSTPma) + math.round(ta.change(time)*2))
+label.delete(_laSTPma[1])
 
 
 //
@@ -358,40 +363,18 @@ float _pvthi = na
 float _close = na
 _close := close
 var label _laSTP = na
-var label _laSTPL =na
-var label _laSTPH =na
 if pvtlo
     _pvthl:=pvtlo
-//    label.delete(_laSTP[1])
-//    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+    _pvtlo := pvtlo
+    label.delete(_laSTP[1]) //for debug
+    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,50), textcolor=color.white, size=size.small, style=label.style_label_left)
 if pvthi
     _pvthl:=pvthi
-//    label.delete(_laSTP[1])
-//    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,50), textcolor=color.white, size=size.small, style=label.style_label_left)
-if _pvthl
-    if higherlow or lowerlow
-        _pvtlo = _pvthl
-        label.delete(_laSTPL)
-        _laSTPL := label.new(x=time, y=_pvtlo, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.white, size=size.small, style=label.style_label_upper_left)
-    if higherhigh or lowerhigh
-        _pvthi = _pvthl
-        label.delete(_laSTPH)
-        _laSTPH := label.new(x=time, y=_pvthi, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.white, size=size.small, style=label.style_label_lower_left)
-
-label.set_text(_laSTPH, str.format("{0,number,#.#}% STP1 ${1,number,#.##} {2}",(close-label.get_y(_laSTPH))/close*100,label.get_y(_laSTPH), higherhigh?'HH':lowerhigh?'LH':'R/S'))
-label.set_text(_laSTPL, str.format("{0,number,#.#}% STP1 ${1,number,#.##} {2}",(close-label.get_y(_laSTPL))/close*100,label.get_y(_laSTPL), higherlow?'HL':lowerlow?'LL':'R/S'))
-//
-label.set_x(_laSTPL, label.get_x(_laSTPL) + math.round(ta.change(time)))
-label.set_x(_laSTPH, label.get_x(_laSTPH) + math.round(ta.change(time)))
-//label.delete(_laSTP)
-//label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)))
-//label.set_text(_laSTP, str.format("{0,number,#.#}% STP ${1,number,#.##} {2}",(_close-label.get_y(_laSTP))/_close*100,label.get_y(_laSTP),higherlow?'HL':lowerlow?'LL':higherhigh?'HH':lowerhigh?'LH':''))
-
-var label _laSTPma = na
-label.delete(_laSTPma)
-_laSTPma := label.new(x=time, y=signalMA, text=str.format("{0,number,#.#}% STP ${1,number,#.##}",(close-signalMA)/close*100, signalMA), color=color.new(GOLD,80), xloc=xloc.bar_time, yloc=yloc.price, textcolor=color.white, size=size.small, style=label.style_label_left)
-label.set_x(_laSTPma, label.get_x(_laSTPma) + math.round(ta.change(time)*2))
-
+    _pvthi := pvthi
+    label.delete(_laSTP[1]) //for debug
+    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)))
+label.set_text(_laSTP, str.format("{0,number,#.#}% STP ${1,number,#.##} {2}",(_close-_pvthl)/_close*100,_close,higherlow?'HL':lowerlow?'LL':higherhigh?'HH':lowerhigh?'LH':''))
 
 //Count How many candles for current Pivot Level, If new reset.
 counthi = 0
