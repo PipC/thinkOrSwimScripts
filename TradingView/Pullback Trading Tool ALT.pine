@@ -1,7 +1,7 @@
-//@version=3
+//@version=5
 //
 
-study(title = "Pullback Trading Tool ALT", shorttitle = "PBTOOLA R2.0", overlay = true)
+indicator(title='Pullback Trading Tool ALT', shorttitle='PBTOOLA R2.0', overlay=true)
 
 //
 //
@@ -135,65 +135,65 @@ study(title = "Pullback Trading Tool ALT", shorttitle = "PBTOOLA R2.0", overlay 
 // === INPUTS ===
 
 // Un-Anchored Fast + Slow MA - Type and Length
-ma_src      = input(close,title="Source for All Moving Averages")
-showMAs     = input(true,title="Show MA Ribbon")
-anchorRibbon= input(true,title="Anchor MA Ribbon")
-fastType    = input(defval="EMA", title="Fast Ribbon MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"], type=string)
-fastLen_    = input(defval=5, title="Fast Ribbon MA Length:", minval=1)
-slowType    = input(defval="EMA", title="Slow Ribbon MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"], type=string)
-slowLen_    = input(defval=12, title="Slow Ribbon MA Length:", minval=1)
+ma_src = input(close, title='Source for All Moving Averages')
+showMAs = input(true, title='Show MA Ribbon')
+anchorRibbon = input(true, title='Anchor MA Ribbon')
+fastType = input.string(defval='EMA', title='Fast Ribbon MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+fastLen_ = input.int(defval=5, title='Fast Ribbon MA Length:', minval=1)
+slowType = input.string(defval='EMA', title='Slow Ribbon MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+slowLen_ = input.int(defval=12, title='Slow Ribbon MA Length:', minval=1)
 //
 // Anchor Higher Time Frame
-anchor           = input(0,minval=0,maxval=1440,title="Anchor TimeFrame in Mins (0=none, 1D=1440, 1W=7200)")
+anchor = input.int(0, minval=0, maxval=1440, title='Anchor TimeFrame in Mins (0=none, 1D=1440, 1W=7200)')
 //
 // Anchored Fast+ Medium + Slow MA + Signal - type, length
-fastAnchorType   = input(defval="EMA", title="Fast Anchored MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"], type=string)
-fastAnchorLen_   = input(defval=35, title="Fast Anchored MA Length:", minval=1)
-mediumAnchorType = input(defval="EMA", title="Medium Anchored MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"], type=string)
-mediumAnchorLen_ = input(defval=65, title="Medium Anchored MA Length:", minval=1)
-useSlowMA        = input(false,title="Show Slow Anchored MA")
-slowAnchorType   = input(defval="EMA", title="Slow Anchored MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"], type=string)
-slowAnchorLen_   = input(defval=200, title="Slow Anchored MA Length:", minval=1)
+fastAnchorType = input.string(defval='EMA', title='Fast Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+fastAnchorLen_ = input.int(defval=35, title='Fast Anchored MA Length:', minval=1)
+mediumAnchorType = input.string(defval='EMA', title='Medium Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+mediumAnchorLen_ = input.int(defval=65, title='Medium Anchored MA Length:', minval=1)
+useSlowMA = input(false, title='Show Slow Anchored MA')
+slowAnchorType = input.string(defval='EMA', title='Slow Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+slowAnchorLen_ = input.int(defval=200, title='Slow Anchored MA Length:', minval=1)
 // Signal MA
-signalType    = input(defval="EMA", title="Signal Anchored MA Type: ", options=["SMA", "EMA", "WMA", "VWMA", "SMMA", "DEMA", "TEMA", "HullMA", "ZEMA", "TMA", "SSMA"], type=string)
-signalLen_    = input(defval=50, title="Signal Anchored MA Length:", minval=1)
+signalType = input.string(defval='EMA', title='Signal Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+signalLen_ = input.int(defval=50, title='Signal Anchored MA Length:', minval=1)
 //
-ShowBreak     = input(false,title="Show Entrys for Trend Breaks")
-ShowPB        = input(false,title="Show Entrys for PB Fractal Breaks")
-closeBr       = input(true, title="Use Close Break instead Touch Fractal Break")
-Lookback      = input(6,minval=1,type=integer,title="Pull Back Lookback Length")
+ShowBreak = input(false, title='Show Entrys for Trend Breaks')
+ShowPB = input(false, title='Show Entrys for PB Fractal Breaks')
+closeBr = input(true, title='Use Close Break instead Touch Fractal Break')
+Lookback = input.int(6, minval=1, title='Pull Back Lookback Length')
 //
-ShowBarColor  = input(true, title="Show coloured Bars close relative to Signal MA")
-useGrabClr    = input(true, title="Use Grab Candle (6-tone) Colouring, instead of Standard (3-tone)")
+ShowBarColor = input(true, title='Show coloured Bars close relative to Signal MA')
+useGrabClr = input(true, title='Use Grab Candle (6-tone) Colouring, instead of Standard (3-tone)')
 // Pivots
-ShowPivots    = input(true,title="Show Pivot Points")
-pvtLenL       = input(2,minval=1,title="Pivot Length Left Hand Side")
-pvtLenR       = input(2,minval=1,title="Pivot Length Right Hand Side")
-ShowSRLevels  = input(false,title="Show S/R Level Extensions")
-ShowChannel   = input(false,title="Show Levels as a Fractal Chaos Channel")
-maxLvlLen     = input(0,minval=0, title="Maximum S/R Level Extension Length")
-uRenko        = input(false, title="Use Renko Style Pivots (open/close for high/low)")
+ShowPivots = input(true, title='Show Pivot Points')
+pvtLenL = input.int(2, minval=1, title='Pivot Length Left Hand Side')
+pvtLenR = input.int(2, minval=1, title='Pivot Length Right Hand Side')
+ShowSRLevels = input(false, title='Show S/R Level Extensions')
+ShowChannel = input(false, title='Show Levels as a Fractal Chaos Channel')
+maxLvlLen = input.int(0, minval=0, title='Maximum S/R Level Extension Length')
+uRenko = input(false, title='Use Renko Style Pivots (open/close for high/low)')
 //
-ShowHHLL      = input(false)
+ShowHHLL = input(true)
 
 //
 //
 // --- CONSTANTS ---
-DodgerBlue  = #1E90FF
-Gold    = #FFD700
+DodgerBlue = #1E90FF
+Gold = #FFD700
 // --- /CONTANTS ---
 //
 
 // Constants colours that include fully non-transparent option.
-GREEN   = #008000FF
-LIME    = #00FF00FF
-RED     = #FF0000FF
-BLUE    = #0000FFFF
-AQUA    = #00FFFFFF
+GREEN = #008000FF
+LIME = #00FF00FF
+RED = #FF0000FF
+BLUE = #0000FFFF
+AQUA = #00FFFFFF
 DARKRED = #8B0000FF
-GRAY    = #808080FF
-YELLOW  = #FFFF00FF
-GOLD    = #FFD700FF
+GRAY = #808080FF
+YELLOW = #FFFF00FF
+GOLD = #FFD700FF
 DODGERBLUE = #1E90FFFF
 
 //
@@ -205,51 +205,56 @@ DODGERBLUE = #1E90FFFF
 // Returns MA input selection variant, default to SMA if blank or typo.
 
 // SuperSmoother filter
-// c 2013  John F. Ehlers
-variant_supersmoother(src,len) =>
-    a1 = exp(-1.414*3.14159 / len)
-    b1 = 2*a1*cos(1.414*3.14159 / len)
+// © 2013  John F. Ehlers
+variant_supersmoother(src, len) =>
+    a1 = math.exp(-1.414 * 3.14159 / len)
+    b1 = 2 * a1 * math.cos(1.414 * 3.14159 / len)
     c2 = b1
-    c3 = (-a1)*a1
+    c3 = -a1 * a1
     c1 = 1 - c2 - c3
     v9 = 0.0
-    v9 := c1*(src + nz(src[1])) / 2 + c2*nz(v9[1]) + c3*nz(v9[2])
+    v9 := c1 * (src + nz(src[1])) / 2 + c2 * nz(v9[1]) + c3 * nz(v9[2])
     v9
 
-variant_smoothed(src,len) =>
+variant_smoothed(src, len) =>
     v5 = 0.0
-    v5 := na(v5[1]) ? sma(src, len) : (v5[1] * (len - 1) + src) / len
+    sma_1 = ta.sma(src, len)
+    v5 := na(v5[1]) ? sma_1 : (v5[1] * (len - 1) + src) / len
     v5
 
-variant_zerolagema(src,len) =>
-    ema1 = ema(src, len)
-    ema2 = ema(ema1, len)
-    v10 = ema1+(ema1-ema2)
+variant_zerolagema(src, len) =>
+    ema1 = ta.ema(src, len)
+    ema2 = ta.ema(ema1, len)
+    v10 = ema1 + ema1 - ema2
     v10
 
-variant_doubleema(src,len) =>
-    v2 = ema(src, len)
-    v6 = 2 * v2 - ema(v2, len)
+variant_doubleema(src, len) =>
+    v2 = ta.ema(src, len)
+    v6 = 2 * v2 - ta.ema(v2, len)
     v6
 
-variant_tripleema(src,len) =>
-    v2 = ema(src, len)
-    v7 = 3 * (v2 - ema(v2, len)) + ema(ema(v2, len), len)               // Triple Exponential
+variant_tripleema(src, len) =>
+    v2 = ta.ema(src, len)
+    v7 = 3 * (v2 - ta.ema(v2, len)) + ta.ema(ta.ema(v2, len), len)  // Triple Exponential
     v7
 
 // return variant, defaults to SMA
 variant(type, src, len) =>
-    type=="EMA"     ? ema(src,len) :
-      type=="WMA"   ? wma(src,len):
-      type=="VWMA"  ? vwma(src,len) :
-      type=="SMMA"  ? variant_smoothed(src,len) :
-      type=="DEMA"  ? variant_doubleema(src,len):
-      type=="TEMA"  ? variant_tripleema(src,len):
-      type=="HullMA"? wma(2 * wma(src, len / 2) - wma(src, len), round(sqrt(len))) :
-      type=="SSMA"  ? variant_supersmoother(src,len) :
-      type=="ZEMA"  ? variant_zerolagema(src,len) :
-      type=="TMA"   ? sma(sma(src,len),len) :
-                      sma(src,len)
+    ema_1 = ta.ema(src, len)
+    wma_1 = ta.wma(src, len)
+    vwma_1 = ta.vwma(src, len)
+    variant_smoothed__1 = variant_smoothed(src, len)
+    variant_doubleema__1 = variant_doubleema(src, len)
+    variant_tripleema__1 = variant_tripleema(src, len)
+    wma_2 = ta.wma(src, len / 2)
+    wma_3 = ta.wma(src, len)
+    wma_4 = ta.wma(2 * wma_2 - wma_3, math.round(math.sqrt(len)))
+    variant_supersmoother__1 = variant_supersmoother(src, len)
+    variant_zerolagema__1 = variant_zerolagema(src, len)
+    sma_1 = ta.sma(src, len)
+    sma_2 = ta.sma(sma_1, len)
+    sma_3 = ta.sma(src, len)
+    type == 'EMA' ? ema_1 : type == 'WMA' ? wma_1 : type == 'VWMA' ? vwma_1 : type == 'SMMA' ? variant_smoothed__1 : type == 'DEMA' ? variant_doubleema__1 : type == 'TEMA' ? variant_tripleema__1 : type == 'HullMA' ? wma_4 : type == 'SSMA' ? variant_supersmoother__1 : type == 'ZEMA' ? variant_zerolagema__1 : type == 'TMA' ? sma_2 : sma_3
 
 // - /variant
 
@@ -258,114 +263,158 @@ variant(type, src, len) =>
 // === SERIES ===
 
 // If have anchor specified, calculate the base multiplier.
-mult  = isintraday ? anchor==0 or interval<=0 or interval>=anchor? 1 : round(anchor/interval) : 1
-mult := isdwm? isdaily ? (anchor==0 or interval<=0 or interval>=anchor or anchor<=1440 ? 1 : round(anchor/1440)) :
-               isweekly ? (anchor==0 or interval<=0 or interval>=anchor or anchor<=7200 ? 1 : round(anchor/7200)) :
-               ismonthly ? (anchor==0 or interval<=0 or interval>=anchor or anchor<=30240 ? 1 : round(anchor/30240)) : 1 : mult
+mult = timeframe.isintraday ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor ? 1 : math.round(anchor / timeframe.multiplier) : 1
+mult := timeframe.isdwm ? timeframe.isdaily ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor or anchor <= 1440 ? 1 : math.round(anchor / 1440) : timeframe.isweekly ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor or anchor <= 7200 ? 1 : math.round(anchor / 7200) : timeframe.ismonthly ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor or anchor <= 30240 ? 1 : math.round(anchor / 30240) : 1 : mult
 
 //adjust MA lengths with Anchor Multiplier
-fastAnchorLen = mult==1 ? fastAnchorLen_ : (fastAnchorLen_*mult)
-mediumAnchorLen = mult==1 ? mediumAnchorLen_ : (mediumAnchorLen_*mult)
-slowAnchorLen = mult==1 ? slowAnchorLen_ : (slowAnchorLen_*mult)
-signalLen = mult==1 ? signalLen_ : (signalLen_*mult)
-fastLen = anchorRibbon? mult==1 ? fastLen_ : (fastLen_*mult) : fastLen_
-slowLen = anchorRibbon? mult==1 ? slowLen_ : (slowLen_*mult) : slowLen_
+fastAnchorLen = mult == 1 ? fastAnchorLen_ : fastAnchorLen_ * mult
+mediumAnchorLen = mult == 1 ? mediumAnchorLen_ : mediumAnchorLen_ * mult
+slowAnchorLen = mult == 1 ? slowAnchorLen_ : slowAnchorLen_ * mult
+signalLen = mult == 1 ? signalLen_ : signalLen_ * mult
+fastLen = anchorRibbon ? mult == 1 ? fastLen_ : fastLen_ * mult : fastLen_
+slowLen = anchorRibbon ? mult == 1 ? slowLen_ : slowLen_ * mult : slowLen_
 
 // Get the two MAs
-fastMA = variant(fastType,ma_src, fastLen)
-slowMA = variant(slowType,ma_src, slowLen)
+fastMA = variant(fastType, ma_src, fastLen)
+slowMA = variant(slowType, ma_src, slowLen)
 //
-fastAnchorMA = variant(fastAnchorType,ma_src, fastAnchorLen)
-mediumAnchorMA = variant(mediumAnchorType,ma_src, mediumAnchorLen)
-slowAnchorMA = variant(slowAnchorType,ma_src, slowAnchorLen)
+fastAnchorMA = variant(fastAnchorType, ma_src, fastAnchorLen)
+mediumAnchorMA = variant(mediumAnchorType, ma_src, mediumAnchorLen)
+slowAnchorMA = variant(slowAnchorType, ma_src, slowAnchorLen)
 //
-signalMA = variant(signalType,ma_src, signalLen)
+signalMA = variant(signalType, ma_src, signalLen)
 
 // - PIVOT VARIABLES
 //
-high_  = uRenko? max(close,open) : high
-low_   = uRenko? min(close,open) : low
+high_ = uRenko ? math.max(close, open) : high
+low_ = uRenko ? math.min(close, open) : low
 
 
 // Get High and Low Pivot Points
-pvthi = pivothigh(high_,pvtLenL,pvtLenR)
-pvtlo = pivotlow(low_,pvtLenL,pvtLenR)
+pvthi = ta.pivothigh(high_, pvtLenL, pvtLenR)
+pvtlo = ta.pivotlow(low_, pvtLenL, pvtLenR)
 
 //  ||-----------------------------------------------------------------------------------------------------||
 //  ||---   Higher Highs, Lower Highs, Higher Lows, Lower Lows  -------------------------------------------||
-higherhigh = na(pvthi) ? na : ( valuewhen(pvthi, high_[pvtLenR], 1) < valuewhen(pvthi, high_[pvtLenR], 0) ) ? pvthi : na
-lowerhigh = na(pvthi) ? na : ( valuewhen(pvthi, high_[pvtLenR], 1) > valuewhen(pvthi, high_[pvtLenR], 0) ) ? pvthi : na
-higherlow = na(pvtlo) ? na : ( valuewhen(pvtlo, low_[pvtLenR], 1) < valuewhen(pvtlo, low_[pvtLenR], 0) ) ? pvtlo : na
-lowerlow =  na(pvtlo) ? na : ( valuewhen(pvtlo, low_[pvtLenR], 1) > valuewhen(pvtlo, low_[pvtLenR], 0) ) ? pvtlo : na
+valuewhen_1 = ta.valuewhen(pvthi, high_[pvtLenR], 1)
+valuewhen_2 = ta.valuewhen(pvthi, high_[pvtLenR], 0)
+higherhigh = na(pvthi) ? na : valuewhen_1 < valuewhen_2 ? pvthi : na
+valuewhen_3 = ta.valuewhen(pvthi, high_[pvtLenR], 1)
+valuewhen_4 = ta.valuewhen(pvthi, high_[pvtLenR], 0)
+lowerhigh = na(pvthi) ? na : valuewhen_3 > valuewhen_4 ? pvthi : na
+valuewhen_5 = ta.valuewhen(pvtlo, low_[pvtLenR], 1)
+valuewhen_6 = ta.valuewhen(pvtlo, low_[pvtLenR], 0)
+higherlow = na(pvtlo) ? na : valuewhen_5 < valuewhen_6 ? pvtlo : na
+valuewhen_7 = ta.valuewhen(pvtlo, low_[pvtLenR], 1)
+valuewhen_8 = ta.valuewhen(pvtlo, low_[pvtLenR], 0)
+lowerlow = na(pvtlo) ? na : valuewhen_7 > valuewhen_8 ? pvtlo : na
 
 // === /SERIES ===
 
 // === PLOTTING ===
 //
 // Colour bars according to the close position relative to the PAC selected.
-bColour =  open>signalMA and close>signalMA? DODGERBLUE  :
-          open<signalMA and close<signalMA? RED :
-          YELLOW
-bColour := not useGrabClr ? bColour :
-          open>signalMA and close>signalMA? open>close?GREEN:LIME :
-          open<signalMA and close<signalMA? open>close?DARKRED:RED :
-          open>close?BLUE:AQUA
-barcolor(ShowBarColor?bColour:na, title = "Signal Bar Colours")
+bColour = open > signalMA and close > signalMA ? DODGERBLUE : open < signalMA and close < signalMA ? RED : YELLOW
+bColour := not useGrabClr ? bColour : open > signalMA and close > signalMA ? open > close ? GREEN : LIME : open < signalMA and close < signalMA ? open > close ? DARKRED : RED : open > close ? BLUE : AQUA
+barcolor(ShowBarColor ? bColour : na, title='Signal Bar Colours')
 
 // Draw the EMA ribbon
-p1=plot(showMAs ?fastMA:na, color=rising(fastMA,2)?aqua:fuchsia,join=true,linewidth=1,transp=10,title="Fast MA")
-p2=plot(showMAs ?slowMA:na, color=rising(slowMA,2)?aqua:fuchsia,join=true,linewidth=1,transp=10,title="Slow MA")
-fill(p1,p2,color=fastMA>slowMA?aqua:fuchsia,transp=90,title="Ribbon Fill")
+p1 = plot(showMAs ? fastMA : na, color=ta.rising(fastMA, 2) ? color.aqua : color.fuchsia, join=true, linewidth=1, title='Fast MA', transp=10)
+p2 = plot(showMAs ? slowMA : na, color=ta.rising(slowMA, 2) ? color.aqua : color.fuchsia, join=true, linewidth=1, title='Slow MA', transp=10)
+fill(p1, p2, color=fastMA > slowMA ? color.aqua : color.fuchsia, title='Ribbon Fill', transp=90)
 
 
 //
-plot(signalMA, color=Gold,join=true,style=circles,linewidth=2,transp=20,title="Signal MA")
+plot(signalMA, color=color.new(Gold, 20), join=true, style=plot.style_circles, linewidth=2, title='Signal MA')
+
+
+
 //
-p3=plot(fastAnchorMA, color=DodgerBlue,join=true,style=line,linewidth=1,transp=20,title="Fast Anchored MA")
-p4=plot(mediumAnchorMA, color=green,join=true,style=line,linewidth=1,transp=20,title="Medium Anchored MA")
-plot(useSlowMA ? slowAnchorMA:na, color=gray,join=true,style=line,linewidth=2,transp=20,title="Slow Anchored MA")
-fill(p3,p4,color=gray,transp=90,title="Anchored MA Fill")
+p3 = plot(fastAnchorMA, color=color.new(DodgerBlue, 20), join=true, style=plot.style_line, linewidth=1, title='Fast Anchored MA')
+p4 = plot(mediumAnchorMA, color=color.new(color.green, 20), join=true, style=plot.style_line, linewidth=1, title='Medium Anchored MA')
+plot(useSlowMA ? slowAnchorMA : na, color=color.new(color.gray, 20), join=true, style=plot.style_circles, linewidth=2, title='Slow Anchored MA')
+fill(p3, p4, color=color.new(color.gray, 90), title='Anchored MA Fill')
 
 
 // If selected Display the HH/LL above/below candle.
-plotshape(ShowHHLL ? higherhigh : na, title='HH', style=shape.triangleup, location=location.abovebar, color=lime, text="HH", offset=-pvtLenR,transp=20)
-plotshape(ShowHHLL ? lowerhigh : na, title='LH', style=shape.triangleup, location=location.abovebar, color=red, text="LH", offset=-pvtLenR,transp=20)
-plotshape(ShowHHLL ? higherlow : na, title='HL', style=shape.triangledown, location=location.belowbar, color=lime, text="HL", offset=-pvtLenR,transp=20)
-plotshape(ShowHHLL ? lowerlow : na, title='LL', style=shape.triangledown, location=location.belowbar, color=red, text="LL", offset=-pvtLenR,transp=20)
+plotshape(ShowHHLL ? higherhigh : na, title='HH', style=shape.triangleup, location=location.abovebar, color=color.new(color.lime, 20), text='HH', offset=-pvtLenR)
+plotshape(ShowHHLL ? lowerhigh : na, title='LH', style=shape.triangleup, location=location.abovebar, color=color.new(color.red, 20), text='LH', offset=-pvtLenR)
+plotshape(ShowHHLL ? higherlow : na, title='HL', style=shape.triangledown, location=location.belowbar, color=color.new(color.lime, 20), text='HL', offset=-pvtLenR)
+plotshape(ShowHHLL ? lowerlow : na, title='LL', style=shape.triangledown, location=location.belowbar, color=color.new(color.red, 20), text='LL', offset=-pvtLenR)
 
 
 // If Selected Display Pivot points
 //plotshape(ShowPivots ? pvthi :na, title='High Pivot *', location=location.abovebar, style=shape.triangleup,color=green, offset=-pvtLenR,transp=0,size=size.auto)
 //plotshape(ShowPivots ? pvtlo :na,  title='Low Pivot *', location=location.belowbar, style=shape.triangledown,color=maroon, offset=-pvtLenR,transp=0,size=size.auto)
-plot(ShowPivots and not ShowHHLL? pvthi :na, title='High Pivot *', style=circles,join=false,color=white, offset=-pvtLenR,transp=50,linewidth=3)
-plot(ShowPivots and not ShowHHLL? pvtlo :na, title='Low Pivot *', style=circles,join=false,color=white, offset=-pvtLenR,transp=50,linewidth=3)
-plot(ShowPivots and not ShowHHLL? pvthi :na, title='High Pivot *', style=circles,join=false,color=green, offset=-pvtLenR,transp=0,linewidth=2)
-plot(ShowPivots and not ShowHHLL? pvtlo :na, title='Low Pivot *', style=circles,join=false,color=maroon, offset=-pvtLenR,transp=0,linewidth=2)
+plot(ShowPivots and not ShowHHLL ? pvthi : na, title='High Pivot *', style=plot.style_circles, join=false, color=color.new(color.white, 50), offset=-pvtLenR, linewidth=3)
+plot(ShowPivots and not ShowHHLL ? pvtlo : na, title='Low Pivot *', style=plot.style_circles, join=false, color=color.new(color.white, 50), offset=-pvtLenR, linewidth=3)
+plot(ShowPivots and not ShowHHLL ? pvthi : na, title='High Pivot *', style=plot.style_circles, join=false, color=color.new(color.green, 0), offset=-pvtLenR, linewidth=2)
+plot(ShowPivots and not ShowHHLL ? pvtlo : na, title='Low Pivot *', style=plot.style_circles, join=false, color=color.new(color.maroon, 0), offset=-pvtLenR, linewidth=2)
 
+float _pvthl = na
+_pvthl := _pvthl[1]
+float _pvtlo = na
+float _pvthi = na
+float _close = na
+_close := close
+var label _laSTP = na
+var label _laSTPL =na
+var label _laSTPH =na
+if pvtlo
+    _pvthl:=pvtlo
+//    label.delete(_laSTP[1])
+//    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+if pvthi
+    _pvthl:=pvthi
+//    label.delete(_laSTP[1])
+//    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+if _pvthl
+    if higherlow or lowerlow
+        _pvtlo = _pvthl
+        label.delete(_laSTPL)
+        _laSTPL := label.new(x=time, y=_pvtlo, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.white, size=size.small, style=label.style_label_upper_left)
+    if higherhigh or lowerhigh
+        _pvthi = _pvthl
+        label.delete(_laSTPH)
+        _laSTPH := label.new(x=time, y=_pvthi, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.white, size=size.small, style=label.style_label_lower_left)
+
+label.set_text(_laSTPH, str.format("{0,number,#.#}% STP1 ${1,number,#.##} {2}",(close-label.get_y(_laSTPH))/close*100,label.get_y(_laSTPH), higherhigh?'HH':lowerhigh?'LH':'R/S'))
+label.set_text(_laSTPL, str.format("{0,number,#.#}% STP1 ${1,number,#.##} {2}",(close-label.get_y(_laSTPL))/close*100,label.get_y(_laSTPL), higherlow?'HL':lowerlow?'LL':'R/S'))
+//
+label.set_x(_laSTPL, label.get_x(_laSTPL) + math.round(ta.change(time)))
+label.set_x(_laSTPH, label.get_x(_laSTPH) + math.round(ta.change(time)))
+//label.delete(_laSTP)
+//label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)))
+//label.set_text(_laSTP, str.format("{0,number,#.#}% STP ${1,number,#.##} {2}",(_close-label.get_y(_laSTP))/_close*100,label.get_y(_laSTP),higherlow?'HL':lowerlow?'LL':higherhigh?'HH':lowerhigh?'LH':''))
+
+var label _laSTPma = na
+label.delete(_laSTPma)
+_laSTPma := label.new(x=time, y=signalMA, text=str.format("{0,number,#.#}% STP ${1,number,#.##}",(close-signalMA)/close*100, signalMA), color=color.new(GOLD,80), xloc=xloc.bar_time, yloc=yloc.price, textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laSTPma, label.get_x(_laSTPma) + math.round(ta.change(time)*2))
 
 
 //Count How many candles for current Pivot Level, If new reset.
 counthi = 0
 countlo = 0
-counthi := pvthi ? 0 : nz(counthi[1])+1
-countlo := pvtlo ? 0 : nz(countlo[1])+1
+counthi := pvthi ? 0 : nz(counthi[1]) + 1
+countlo := pvtlo ? 0 : nz(countlo[1]) + 1
 
 pvthis = high
 pvtlos = low
-pvthis := pvthi ? high[pvtLenR] : nz(pvthis[1],high)
-pvtlos := pvtlo ? low[pvtLenR] :  nz(pvtlos[1],low)
+pvthis := pvthi ? high[pvtLenR] : nz(pvthis[1], high)
+pvtlos := pvtlo ? low[pvtLenR] : nz(pvtlos[1], low)
 
-hipc = (pvthis != pvthis[1]) ? na : green
-lopc = (pvtlos != pvtlos[1]) ? na : maroon
+hipc = pvthis != pvthis[1] ? na : color.green
+lopc = pvtlos != pvtlos[1] ? na : color.maroon
 
-plot(ShowSRLevels and not ShowChannel and (maxLvlLen==0 or counthi<maxLvlLen)? pvthis : na, color=hipc, transp=0, linewidth=1, offset=-pvtLenR, title="Top Levels")
-plot(ShowSRLevels and not ShowChannel and (maxLvlLen==0 or countlo<maxLvlLen)? pvtlos : na, color=lopc, transp=0, linewidth=1, offset=-pvtLenR, title="Bottom Levels")
-plot(ShowSRLevels and not ShowChannel and (maxLvlLen==0 or counthi<maxLvlLen) ? pvthis : na, color=hipc, transp=0, linewidth=1, offset=0, title="Top Levels 2")
-plot(ShowSRLevels and not ShowChannel and (maxLvlLen==0 or countlo<maxLvlLen) ? pvtlos : na, color=lopc, transp=0, linewidth=1, offset=0, title="Bottom Levels 2")
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or counthi < maxLvlLen) ? pvthis : na, color=hipc, linewidth=1, offset=-pvtLenR, title='Top Levels', transp=0)
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or countlo < maxLvlLen) ? pvtlos : na, color=lopc, linewidth=1, offset=-pvtLenR, title='Bottom Levels', transp=0)
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or counthi < maxLvlLen) ? pvthis : na, color=hipc, linewidth=1, offset=0, title='Top Levels 2', transp=0)
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or countlo < maxLvlLen) ? pvtlos : na, color=lopc, linewidth=1, offset=0, title='Bottom Levels 2', transp=0)
 
 // Show Levels as a Fractal Chaos Channel
-plot(ShowSRLevels and ShowChannel ? pvthis : na, color=green, transp=0, linewidth=1, offset=0, title="Top Chaos Channel",trackprice=false)
-plot(ShowSRLevels and ShowChannel ? pvtlos : na, color=maroon, transp=0, linewidth=1, offset=0, title="Bottom Chaos Channel",trackprice=false)
+plot(ShowSRLevels and ShowChannel ? pvthis : na, color=color.new(color.green, 0), linewidth=1, offset=0, title='Top Chaos Channel', trackprice=false)
+plot(ShowSRLevels and ShowChannel ? pvtlos : na, color=color.new(color.maroon, 0), linewidth=1, offset=0, title='Bottom Chaos Channel', trackprice=false)
 
 
 // === /PLOTTING ===
@@ -375,10 +424,10 @@ plot(ShowSRLevels and ShowChannel ? pvtlos : na, color=maroon, transp=0, linewid
 
 //Trend Definition
 
-tr_up   = (slowMA>mediumAnchorMA and slowMA>fastAnchorMA and slowMA>signalMA) and (fastMA>mediumAnchorMA and fastMA>fastAnchorMA and fastMA>signalMA)
+tr_up = slowMA > mediumAnchorMA and slowMA > fastAnchorMA and slowMA > signalMA and fastMA > mediumAnchorMA and fastMA > fastAnchorMA and fastMA > signalMA
 
 //fastAnchorMA>mediumAnchorMA and fastAnchorMA>signalMA and ((signalLen<mediumAnchorLen and signalMA>mediumAnchorMA) or (signalLen>mediumAnchorLen and mediumAnchorMA>signalMA))
-tr_down = (slowMA<mediumAnchorMA and slowMA<fastAnchorMA and slowMA<signalMA)  and (fastMA<mediumAnchorMA and fastMA<fastAnchorMA and fastMA<signalMA)
+tr_down = slowMA < mediumAnchorMA and slowMA < fastAnchorMA and slowMA < signalMA and fastMA < mediumAnchorMA and fastMA < fastAnchorMA and fastMA < signalMA
 //fastAnchorMA<mediumAnchorMA and fastAnchorMA<signalMA and ((signalLen<mediumAnchorLen and signalMA<mediumAnchorMA) or (signalLen>mediumAnchorLen and mediumAnchorMA<signalMA))
 
 //PB Entry
@@ -387,21 +436,21 @@ pullbackDnT = 0
 //pullbackUpC = 0
 //pullbackDnC = 0
 //pullbackUpC := tr_up and low<=slowMA? nz(pullbackUpC[1])+1 : 0
-pullbackUpT := tr_up and high[1]<pvthis and high>pvthis and (not closeBr or close>pvthis)? nz(pullbackUpT[1])+1 : 0
+pullbackUpT := tr_up and high[1] < pvthis and high > pvthis and (not closeBr or close > pvthis) ? nz(pullbackUpT[1]) + 1 : 0
 //pullbackUpT := tr_up and close>open and (open<signalMA) and close>signalMA   and barssince(nz(pullbackUpT[1])==1)>Lookback? nz(pullbackUpT[1])+1 : pullbackUpT
 //
 //pullbackDnC := tr_down and high>=slowMA ? nz(pullbackDnC[1])+1 : 0
-pullbackDnT := tr_down and low[1]>pvtlos and low<pvtlos and (not closeBr or close<pvtlos) ? nz(pullbackDnT[1])+1 : 0
+pullbackDnT := tr_down and low[1] > pvtlos and low < pvtlos and (not closeBr or close < pvtlos) ? nz(pullbackDnT[1]) + 1 : 0
 // and barssince(nz(pullbackDnT[1])==1)>Lookback? nz(pullbackDnT[1])+1 : 0
 //pullbackDnT := tr_down and close<open and (open>signalMA) and close<signalMA   and barssince(nz(pullbackDnT[1])==1)>Lookback? nz(pullbackDnT[1])+1 : pullbackDnT
 
 //
-plotarrow(ShowBreak and tr_up and not tr_up[1] ? 1 : na, title="Trend Break Up Entry Arrow", colorup=aqua, maxheight=60, minheight=50, transp=0)
-plotarrow(ShowBreak and tr_down and not tr_down[1]? -1 : na, title="Trend Break Down Entry Arrow", colordown=blue, maxheight=60, minheight=50, transp=0)
+plotarrow(ShowBreak and tr_up and not tr_up[1] ? 1 : na, title='Trend Break Up Entry Arrow', colorup=color.new(color.aqua, 0), maxheight=60, minheight=50)
+plotarrow(ShowBreak and tr_down and not tr_down[1] ? -1 : na, title='Trend Break Down Entry Arrow', colordown=color.new(color.blue, 0), maxheight=60, minheight=50)
 
 //Plot Arrows for Buy Sell Signals
-plotarrow(ShowPB and pullbackUpT==1? pullbackUpT : na, title="PB Up Entry Arrow", colorup=lime, maxheight=60, minheight=50, transp=0)
-plotarrow(ShowPB and pullbackDnT==1? -pullbackDnT : na, title="PB Down Entry Arrow", colordown=red, maxheight=60, minheight=50, transp=0)
+plotarrow(ShowPB and pullbackUpT == 1 ? pullbackUpT : na, title='PB Up Entry Arrow', colorup=color.new(color.lime, 0), maxheight=60, minheight=50)
+plotarrow(ShowPB and pullbackDnT == 1 ? -pullbackDnT : na, title='PB Down Entry Arrow', colordown=color.new(color.red, 0), maxheight=60, minheight=50)
 
 // ---debug
 //plotchar(pvthis, location=location.bottom, transp=0)
@@ -413,16 +462,18 @@ plotarrow(ShowPB and pullbackDnT==1? -pullbackDnT : na, title="PB Down Entry Arr
 // ---/debug
 
 // --- Any LONG and SHORT
-alertcondition((tr_up and not tr_up[1]) or pullbackUpT==1, title="Alert LONG", message="LONG")
-alertcondition((tr_down and not tr_down[1]) or pullbackDnT==1, title="Alert SHORT", message="SHORT")
+alertcondition(tr_up and not tr_up[1] or pullbackUpT == 1, title='Alert LONG', message='LONG')
+alertcondition(tr_down and not tr_down[1] or pullbackDnT == 1, title='Alert SHORT', message='SHORT')
 //
 // --- Individual LONG and Shorts
-alertcondition(tr_up and not tr_up[1] , title="Trend Break Up", message="BREAK LONG")
-alertcondition(tr_down and not tr_down[1], title="Trend Break Down", message="BREAK SHORT")
-alertcondition(pullbackUpT==1 , title="PB Up", message = "PB LONG")
-alertcondition(pullbackDnT==1 , title="PB Down", message= "PB SHORT")
+alertcondition(tr_up and not tr_up[1], title='Trend Break Up', message='BREAK LONG')
+alertcondition(tr_down and not tr_down[1], title='Trend Break Down', message='BREAK SHORT')
+alertcondition(pullbackUpT == 1, title='PB Up', message='PB LONG')
+alertcondition(pullbackDnT == 1, title='PB Down', message='PB SHORT')
 
 
 // === /ALERTS ===
 
 // === eof
+
+

@@ -1,0 +1,307 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// c philchan2008
+
+//@version=5
+strategy("Triple EMA vs 55 EMA", shorttitle="3vs55EMA", overlay=true, margin_long=100, margin_short=100)
+
+stopLossPrecent=input.float(title="Stop Loss Precentage %", step=0.5, defval=8)
+stopBelowHMA55=input.bool(title="Stop Below HMA55", defval=true)
+tradeMaxAmount = input.int(title="Trading Amount", step=1000, defval=10000)
+
+lenA = input(8, title="EMA #A")
+srcA = input(close, title="EMA Source #A")
+outA = ta.ema(srcA, lenA)
+plot(outA, title="EMA #A", color=close >= outA ? color.yellow : color.yellow, linewidth = 1)
+
+lenB = input(13, title="EMA #B")
+srcB = input(close, title="EMA Source #B")
+outB = ta.ema(srcB, lenB)
+plot(outB, title="EMA #B", color=close >= outB ? color.orange : color.orange, linewidth = 1)
+
+lenC = input(21, title="EMA #C")
+srcC = input(close, title="EMA Source #C")
+outC = ta.ema(srcC, lenC)
+plot(outC, title="EMA #C", color=close >= outC ? color.red : color.red, linewidth = 1)
+
+lenD = input(55, title="EMA #D")
+srcD = input(close, title="EMA Source #D")
+outD = ta.ema(srcD, lenD)
+plot(outD, title="EMA #D", color=close >= outD ? color.fuchsia : color.fuchsia, linewidth = 2)
+
+lenE = input(200, title="SMA #E")
+srcE = input(close, title="SMA Source #E")
+outE = ta.sma(srcE, lenE)
+plot(outE, title="SMA #E", color=close >= outE ? color.maroon : color.maroon, linewidth = 3)
+
+
+lenH55H = input(55, title="HMA #H55H")
+srcH55H = input(high, title="HMA Source #H55H")
+outH55H = ta.hma(srcH55H, lenH55H)
+plot55H=plot(stopBelowHMA55 ? outH55H : na, title="SMA #H55H", color=color.new(high >= outH55H ? ( outH55H > outH55H[1] ? color.lime : (high > outH55H ? color.white : color.silver) ) :  color.gray, 50), linewidth = 2, style=plot.style_circles)
+
+lenH55L = input(55, title="HMA #H55L")
+srcH55L = input(low)
+outH55L = ta.hma(srcH55L, lenH55L)
+plot55L=plot(stopBelowHMA55 ? outH55L : na, title="SMA #H55L", color=color.new(low >= outH55L ? ( outH55L > outH55L[1] ? color.lime : (low > outH55L ? color.white : color.silver) ) :  color.gray, 50), linewidth = 1, style=plot.style_circles)
+
+outH55M=(outH55L+outH55H)/2
+fill(plot55L, plot55H, color=color.new(close >=  outH55M ? ( outH55M > outH55M[1] ? color.lime : (close > outH55M ? color.white : color.silver) ) :  color.gray, 90), title='HMA 55 High-Low Fill')
+
+
+
+STBuySignal = outA > outD and outB > outD and outC > outD
+STSellSignal = outA < outD and outB < outD and outC < outD
+
+//plotshape( STBuySignal  ? low: na, title="UpTrend Begins",   location=location.absolute, style=shape.triangleup,   size=size.tiny, color=color.green)
+//plotshape( STSellSignal ? high : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=color.red)
+
+
+//bgColor = (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)  and close > outE and close > ((trend_1 > 0 and trend_2 > 0 and trend_3 > 0)?outH55H:outH55L) ? color.new(color.lime,95) : color.new(color.red,95)
+//bgcolor(bgColor)
+
+
+if (STBuySignal) and (strategy.opentrades == 0) and (not stopBelowHMA55 or (stopBelowHMA55 and  close > outH55H ))
+    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
+    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high, qty=tradeMaxAmount/(high+syminfo.mintick)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+
+
+if (STBuySignal) and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
+    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
+
+
+if (STSellSignal) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+    strategy.exit("XX", stop=low)
+
+if stopBelowHMA55 and ( close < outH55L) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+    strategy.exit("X55L", stop=outH55L)
+
+
+
+
+if (ta.crossover(outC[1],outD[1]))
+    var label _laBUY = na
+    //label.delete(_laBUY)
+    //if close > high[1]+syminfo.mintick
+    _laBUY := label.new(x=time, y=outD, text=str.format("{1,number,#.#}%",outD,(1-outD/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_right)
+
+
+if (ta.crossunder(outC[1],outD[1]))
+    var label _laSELL = na
+    //label.delete(_laSELL)
+    if close < low[1]-syminfo.mintick
+        _laSELL := label.new(x=time, y=outD, text=str.format("{1,number,#.#}%",outD,(1-outD/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// INPUTS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+vp_lookback   = input.int(defval = 200,
+                     title   = "Volume Lookback Depth [10-1000]",
+                     minval  = 10,
+                     maxval  = 1000)
+
+vp_max_bars   = input.int(defval = 500,
+                     title   = "Number of Bars [10-500]",
+                     minval  = 10,
+                     maxval  = 500)
+
+vp_bar_mult   = input.int(defval = 50,
+                     title   = "Bar Length Multiplier [10-100]",
+                     minval  = 10,
+                     maxval  = 100)
+
+vp_bar_offset = input.int(defval = 50,
+                     title   = "Bar Horizontal Offset [0-100]",
+                     minval  = 0,
+                     maxval  = 100)
+
+vp_bar_width  = input.int(defval = 2,
+                     title   = "Bar Width [1-20]",
+                     minval  = 1,
+                     maxval  = 20)
+
+// As suggested by @NXT2017
+vp_delta_type = input.string(defval = "Both",
+                     title   = "Delta Type",
+                     options = ['Both', 'Bullish', 'Bearish'])
+
+vp_poc_show   = input.bool(defval = true,
+                     title   = "Show POC Line")
+
+vp_bar_color  = input.color(defval = color.new(color.gray, 80) ,
+                     title   = "Bar Color")
+
+vp_poc_color  = input.color(defval = color.new(color.white, 30),
+                     title   = "POC Color")
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// VARIABLES
+///////////////////////////////////////////////////////////////////////////////////////////////////
+float vp_Vmax = 0.0
+int vp_VmaxId = 0
+int vp_N_BARS = vp_max_bars
+
+var int vp_first = time
+
+vp_a_P = array.new_float((vp_N_BARS + 1), 0.0)
+vp_a_V = array.new_float(vp_N_BARS, 0.0)
+vp_a_D = array.new_float(vp_N_BARS, 0.0)
+vp_a_W = array.new_int(vp_N_BARS, 0)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// CALCULATIONS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+float vp_HH = ta.highest(high, vp_lookback)
+float vp_LL = ta.lowest(low, vp_lookback)
+
+if barstate.islast
+	float vp_HL = (vp_HH - vp_LL) / vp_N_BARS
+    for j = 1 to (vp_N_BARS + 1)
+        array.set(vp_a_P, (j-1), (vp_LL + vp_HL * j))
+	for i = 0 to (vp_lookback - 1)
+		int Dc = 0
+		array.fill(vp_a_D, 0.0)
+		for j = 0 to (vp_N_BARS - 1)
+			float Pj = array.get(vp_a_P, j)
+			if low[i] < Pj and high[i] > Pj and (vp_delta_type == "Bullish" ?
+			 close[i] >= open[i] : (vp_delta_type == "Bearish" ? close[i] <= open[i] : true))
+				float Dj = array.get(vp_a_D, j)
+				float dDj = Dj + nz(volume[i])
+				array.set(vp_a_D, j, dDj)
+				Dc := Dc + 1
+		for j = 0 to (vp_N_BARS - 1)
+			float Vj = array.get(vp_a_V, j)
+			float Dj = array.get(vp_a_D, j)
+			float dVj = Vj + ((Dc > 0) ? (Dj / Dc) : 0.0)
+			array.set(vp_a_V, j, dVj)
+	vp_Vmax := array.max(vp_a_V)
+    vp_VmaxId := array.indexof(vp_a_V, vp_Vmax)
+    for j = 0 to (vp_N_BARS - 1)
+        float Vj = array.get(vp_a_V, j)
+        int Aj = math.round(vp_bar_mult * Vj / vp_Vmax)
+        array.set(vp_a_W, j, Aj)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// PLOTING
+///////////////////////////////////////////////////////////////////////////////////////////////////
+if barstate.isfirst
+    vp_first := time
+vp_change = ta.change(time)
+vp_x_loc = timenow + math.round(vp_change * vp_bar_offset)
+
+f_setup_bar(n) =>
+    x1 = ((vp_VmaxId == n) and vp_poc_show) ? math.max(time[vp_lookback], vp_first) :
+		 (math.round(vp_change * (vp_bar_offset - array.get(vp_a_W, n))) + timenow)
+	ys = array.get(vp_a_P, n)
+    line.new(x1     = x1,
+             y1     = ys,
+             x2     = vp_x_loc,
+             y2     = ys,
+             xloc   = xloc.bar_time,
+             extend = extend.none,
+             color  = (vp_VmaxId == n ? vp_poc_color : vp_bar_color),
+             style  = line.style_solid,
+             width  = vp_bar_width)
+
+if barstate.islast
+    for i = 0 to (vp_N_BARS - 1) by 1
+        f_setup_bar(i)
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//// END
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// User Options
+vwapLookbackDays = input.int(title="VWAP Anchor Lookback (days)",  defval=55)
+
+// Functions
+getTotalLookbackDays(lookbackWeekdays) =>
+    // Calculate actual lookback days from weekdays
+    int lookbackDays = lookbackWeekdays
+    int currentWeekday = dayofweek(timenow)-1
+    if (lookbackWeekdays > currentWeekday)
+        int weekdaysEachWeek = 5
+        int weekendDaysEachWeek = 2
+        int weekendsToOffset = math.ceil((lookbackWeekdays - currentWeekday) / weekdaysEachWeek)
+        int offsetWeekendDays = weekendDaysEachWeek * weekendsToOffset
+        lookbackDays := offsetWeekendDays + lookbackWeekdays
+    lookbackDays
+isNewPeriod(res) =>
+    // Helper function for finding new bars/periods by resolution
+    t = time(res)
+    newbar = not na(t) and (na(t[1]) or t > t[1])
+
+// Calculate beginning and ending range for VWAP
+int lookback = getTotalLookbackDays(vwapLookbackDays)
+milliseconds_in_lookback_days = 1000 * 60 * 60 * 24 * lookback
+leftborder = timenow - time < milliseconds_in_lookback_days
+rightborder = barstate.islast
+
+// VWAP Variables
+float cumulativePV = na
+float cumulativeVOL = na
+float multiDayVWAP = na
+bool newDay = isNewPeriod("D")
+var startedNewPeriod = false
+bool insideLookbackRange = (leftborder and not rightborder) or rightborder
+
+// Start plotting new VWAP period if it's a new day, inside our lookback range, and only if we haven't already started a new period
+bool startNewPeriod = newDay and insideLookbackRange and not startedNewPeriod
+if (startNewPeriod)
+    startedNewPeriod := true
+
+// Calculate cumulative totals & VWAP as documented below
+// VWAP Docs: https://www.investopedia.com/terms/v/vwap.asp
+cumulativePV := startNewPeriod ? (hlc3 * volume) : (cumulativePV[1] + hlc3 * volume)
+cumulativeVOL := startNewPeriod ? volume : (cumulativeVOL[1] + volume)
+multiDayVWAP := (cumulativePV / cumulativeVOL)
+
+// Plots
+plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new(#ffffff,30), linewidth=1, style=plot.style_stepline)
+
+var label _laVWAP = na
+label.delete(_laVWAP)
+_laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% VWAP ${0,number,#.##}",multiDayVWAP,(close-multiDayVWAP)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.white,80), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laVWAP, label.get_x(_laVWAP) + math.round(ta.change(time)*1.5))
+label.delete(_laVWAP[1])
+
+
+
+if (stopBelowHMA55)
+    var label _la55STP = na
+    label.delete(_la55STP)
+    _la55STP := label.new(x=time+1, y=(STBuySignal?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",(STBuySignal?outH55L:outH55H), 100*(1-(STBuySignal?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
+    label.set_x(_la55STP, label.get_x(_la55STP) + math.round(ta.change(time)*2))
+    label.delete(_la55STP[1])
+
+var label _laSTP = na
+label.delete(_laSTP)
+_laSTP := label.new(x=time+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_upper_left)
+label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)*2))
+label.delete(_laSTP[1])
+
+
+
+var label _laTradeSize = na
+label.delete(_laTradeSize)
+var _orderPrice = close
+_orderPrice := close
+var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
+_orderSize := math.round(tradeMaxAmount/_orderPrice,0)
+_laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
+label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
+label.delete(_laTradeSize[1])
+var tbl = table.new(position=position.bottom_right, columns=2, rows=5, border_width = 1)
+table.cell(tbl, 0, 0, 'Entry Price', bgcolor=#cccccc, text_size=size.small)
+table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.yellow, text_size=size.small)
+table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=size.small)
+table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.yellow, text_size=size.small)
+table.cell(tbl, 0, 2, 'Order Size', bgcolor=#cccccc, text_size=size.small)
+table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=size.small)
+// table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
+// table.cell(tbl, 1, 2, str.tostring(stop, "#.####"), bgcolor=sl_color)

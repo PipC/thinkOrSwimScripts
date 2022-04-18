@@ -1,184 +1,459 @@
-// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// c dgtrd
-
-// Moving Average, calculated using Momentum, Acceleration and Probability (Psychological Effect)
-//
-// Feedback Bands, calculated by applying feedback consept common in Electronics Engineering
-//
 //@version=5
-strategy(title="Momentum adjusted Moving Average by DGT", shorttitle="MaMA by DGT", overlay=true)
+//
 
-// -Input ======================================================================================= //
+indicator(title='Pullback Trading Tool ALT', shorttitle='PBTOOLA R2.0', overlay=true)
 
-stopLossPrecent=input.float(title="Stop Loss Precentage %", step=0.5, defval=5)
-stopBelowHMA55=input.bool(title="Stop Below HMA55", defval=true)
-tradeMaxAmount = input.int(title="Trading Amount", step=1000, defval=10000)
-
-source      = input(close, "Source")
-length      = input.int(55,    "Moving Average Length", minval = 1)
-exponential = input.bool(true)
-mLength     = input.int(34,    "Momentum Length"      , minval = 0)
-accelFactor = input.bool(true,  "Acceleration Factor")
-pLength     = input.int(13,    "Probability Length"   , minval = 1)
-offset      = input.int(1,     "Offset"               , minval =-5, maxval = 5)
-
-displayFB   = input.bool(false, "Display Feedback Bands (Daily TimeFrame)")
-fbFactor    = input.float(.1,    "Feedback Factor"      , minval = 0, maxval =.2, step = .01)
-displayMA   = input.bool(false, "Add Regular Moving Average")
-
-// -Calculation ================================================================================= //
-
-momentum       = ta.change(source  , mLength)
-acceleration   = ta.change(momentum, mLength)
-probability    = math.sum(ta.change(source) > 0 ? 1 : 0, pLength) / pLength
-
-adjustedSource = accelFactor ?
-     source + (momentum + .5 * acceleration) * probability :
-     source +  momentum * probability
-
-MaMA = exponential ? ta.ema(adjustedSource,length) : ta.sma(adjustedSource,length)
-MA   = displayMA   ? exponential ? ta.ema(source,length) : ta.sma(source,length) : na
-
-negative = displayFB and timeframe.isdaily ? ta.ema(MaMA / math.abs(1 + fbFactor * adjustedSource / MaMA), 5) : na
-positive = displayFB and timeframe.isdaily ? ta.ema(MaMA / math.abs(1 - fbFactor * adjustedSource / MaMA), 5) : na
-
-// -Plot ======================================================================================== //
-
-p0 = plot(MaMA,      "Momentum adjusted Moving Average", color = (source > MaMA ? #006400 : #910000), offset=offset)
-p1 = plot(negative,  "MaMA - Negative Feedback Effect" , color = #910000, offset=offset)
-p2 = plot(positive,  "MaMA - Positive Feedback Effect" , color = #006400, offset=offset)
-fill(p0, p1, title = "Lower MaMA Band", transp = 95    , color = #910000)
-fill(p0, p2, title = "Upper MaMA Band", transp = 95    , color = #006400)
-
-plot(MA,             "Regular Moving Average")
-
-alarm = ta.cross(source, MaMA)
-alertcondition(barstate.islast ? alarm[1] : alarm, title="Trading Opportunity", message="MaMA - Probable Trade Opportunity\n{{exchange}}:{{ticker}}->\nPrice = {{close}},\nTime = {{time}}")
-
-// backtest calculations
-
-isBackTest   = input(true,  "שששששששששששששששששש שש Backtest On/Off שש שששששששששששששששששש")
-
-dasCapital   = input.float(10000, "initial capital")
-stopLoss     = input.float(1.,    "Stop Loss %", step=.1) / 100
-lenBckTst    = input.float(1,     "Backtest Period (Year)", step = .25)
-srcInOut     = input(close,  "Source : Entry/Exit Price Assumption")
-lblInOutSL   = input(true,  "Show Entry/Take Profit(Exit)/Stop Loss Labels")
-
-startBckTst  = time > timenow - lenBckTst * 31556952000
-
-var inTrade    = false
-var entryPrice = 0.
-var exitPrice  = 0.
-
-if isBackTest
-
-    var capital    = dasCapital
-    var trades     = 0
-    var win        = 0
-    var loss       = 0
-
-    crossover      = ta.crossover (source, MaMA)
-    crossunder     = ta.crossunder(source, MaMA)
-
-    longCondition  = barstate.islast ? crossover [1] : crossover
-    shortCondition = barstate.islast ? crossunder[1] : crossunder
-
-    stopLossCondition = inTrade ? close < entryPrice * (1 - stopLoss) : 0
-
-    if startBckTst and longCondition and not inTrade
-        entryPrice := srcInOut
-        inTrade    := true
-        trades     := trades + 1
-
-        if lblInOutSL
-            label longLabel = label.new(bar_index, low, text="LE"
-             ,tooltip="entry price  : " + str.tostring(entryPrice) + "\nentry value : " + str.tostring(capital, "#.##")
-             ,color=color.new(color.green,50), style=label.style_label_up, textcolor=color.white, textalign=text.align_center, size=size.tiny)
-            strategy.entry("LE", direction=strategy.long, comment="LE", stop=high+syminfo.mintick, qty=tradeMaxAmount/(high)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
-
-    if (shortCondition or stopLossCondition) and inTrade
-        //exitPrice  := stopLossCondition ? entryPrice * (1 - stopLoss)  : srcInOut
-        exitPrice  := srcInOut
-        inTrade    := false
-        capital    := capital * (exitPrice / entryPrice)
-
-        if exitPrice > entryPrice
-            win    := win  + 1
-        else
-            loss   := loss + 1
-
-        if lblInOutSL
-            txt = stopLossCondition ? "XX" : "TP"
-            label shortLabel = label.new(bar_index, high, text=txt
-                 ,tooltip="change .......... : " + str.tostring((exitPrice / entryPrice - 1) * 100, "#.##") + "%\nentry/exit price : " + str.tostring(entryPrice) + " / " + str.tostring(exitPrice) + "\nnew capital ..... : " + str.tostring(capital, "#.##")
-                 ,color=color.new(color.red,50), style=label.style_label_down, textcolor=color.white, textalign=text.align_center, size=size.tiny)
-            strategy.exit("LX", stop=low)
-
-    var years    = (timenow - time) / 31556952000
-
-    var yearsTxt = ""
-    var remarks  = ""
-
-    if years < lenBckTst
-        lenBckTst := years
-        yearsTxt  := str.tostring(lenBckTst, "#.##") + " Years***"
-        remarks   := "\n\n*   trade statistics for longs entries only\n**  final value, if trade active displays estimated final value\n*** max available data for selected timeframe : # of bars - " + str.tostring(bar_index)
-    else
-        yearsTxt  := str.tostring(lenBckTst, "#.##") + " Year(s)"
-        remarks   := "\n\n*   trade statistics for longs entries only\n**  final value, if trade open displies estimated final value"
-
-    inTradeTxt = inTrade ? "inTrade" : "not inTrade"
-    estimated  = inTrade ? capital * (close / entryPrice) : capital
-    entryTxt   = inTrade ? str.tostring(entryPrice) : "not inTrade"
-    lastTrdTxt = inTrade ? ", Gain/Loss " + str.tostring((estimated/capital - 1) * 100, "#.##") + "%, Stop Loss " + str.tostring(entryPrice * (1 - stopLoss)) : ""
-
-    tooltipTxt = "entires/exit caclulations\n" +
-      "-long entry, when price action cross above MaMA\n" +
-      "-take profit, when price action cross under MaMA\n" +
-      "-stop loss if last value falls by " + str.tostring(stopLoss * 100) + "% of entry price" + remarks
-
-
-    label indiLabel = label.new(time, close
-         ,text="?? Trade Statistics*, Trade Period - " + yearsTxt +
-          "\nשששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש" +
-          "\nSuccess Ratio ...... : " + str.tostring((win/trades)*100, "#") + "%" + ", # of Trades - " + str.tostring(trades) + ", Win/Loss - " + str.tostring(win) + "/" + str.tostring(loss) +
-          "\nGain/Loss % ........ : " + str.tostring((estimated/dasCapital - 1) * 100, "#") + "%" + ", Initial/Final Value** - " + str.tostring(dasCapital) + " / " + str.tostring(estimated, "#") +
-          "\n\nCurrent TradeStatus - " + inTradeTxt + lastTrdTxt +
-          "\nשששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש" +
-          "\nEntry Price/Value . : " + entryTxt + " / " + str.tostring(capital, "#.##") + " " + inTradeTxt +
-          "\nLast Price/Value ... : " + str.tostring(close) + " / " + str.tostring(estimated , "#.##") + " " + inTradeTxt
-         ,tooltip=tooltipTxt
-         ,color=color.new( inTrade ? estimated/dasCapital > 1 ? color.teal : color.maroon : color.gray, 20), xloc=xloc.bar_time, style=label.style_label_left, textcolor=color.white, textalign=text.align_left)
-
-    label.set_x(indiLabel, label.get_x(indiLabel) + math.round(ta.change(time)*3))
-    label.delete(indiLabel[1])
-
-bgcolor(startBckTst and startBckTst != startBckTst[1] ? color.blue : na, title="Bacttest Starting Bar")
-plot(inTrade ? entryPrice : exitPrice > 0 ? exitPrice : na, title="Entry/Exit Price Line", color=inTrade ? color.green : color.red, style = plot.style_circles)
-
-bgColor = source > MaMA ? color.new(color.lime,95) : color.new(color.red,95)
-bgcolor(bgColor)
-
-//Order Entry
-
-//if ( strategy.opentrades == 0) or true
-//if startBckTst and longCondition and not inTrade and lblInOutSL
-    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
-//    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high+syminfo.mintick, qty=tradeMaxAmount/(high)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
-
-//if lblInOutSL and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
-//    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
-
-//if (shortCondition or stopLossCondition) and inTrade and lblInOutSL
-//    strategy.exit("LX", stop=low)
-//    var label _laSELL = na
-//    label.delete(_laSELL)
-//    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("${0,number,#.#} ~ {1,number,#.##}%",xATRTrailingStop, 100*(1-xATRTrailingStop/high)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
-
-//if stopBelowHMA55 and ( close < outH55L)  // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
-//    strategy.exit("X55L", stop=outH55L)
+//
+//
+// Revision:        R2.0
+// Original Author: JustUncleL
+//
+// Description:
+//    This study is an alternative Pullback Tool to my previous versions "Pullback Trading Tool R#.# by JustUncleL".
+//    This version aims to provide a cleaner but powerful trading tool.
+//    It incorporates the majority of the indicators needed to analyse trade Trends for Pullbacks and Reversals. 
+//    The set up utilies, optionally, Heikin Ashi candle or Renko charts. The notes here are mainly in reference
+//    to using standard Candlestick 60min signal chart (or Anchor chart time frame), other higher time frames 
+//    can be used instead as Anchor Time Frames such as 240min(4hr) or 1440min(Daily).
+//
+//    NOTE: A Pullback is synomous to Retracement, generally a Pullback refers to a large Retracement of 100pips
+//    or more. In the context of this Tool and any comments related to it, a Pullback will be the 
+//    same as a Retracement.
+//
+//    Incorporated within this tool are the following indicators:
+//    1. Three Moving Averages (EMA by default) that can optionally be Anchored to a Higher Time Frame:
+//       - DodgerBlue = EMA35 (default)
+//       - Green = EMA65  (default)
+//       - Gray  = EMA200 (default), disabled by default. 
+//    2. One Anchored Signal Moving Average line Yellow EMA50 (default).
+//    3. One Moving Average Ribbon based on two MAs, can be Anchored or Un-Anchored.
+//       - Aqua = EMA05    (default)
+//       - Fuchsia = EMA12 (default)
+//    4. Display Pivots and optional Pivot Levels. By default Pivot is set to : 2 candles RHS of Pivot
+//       and 2 candles LHS of Pivot; this is the setting required to show standard Fractal points.
+//    5. Optional HH, LH, LL, HL finder to help with drawing Trend lines and mini Trend Lines.
+//    6. Coloured coded Bar based on the signal MA: 
+//       the Standard candle colours:
+//       - Blue    = candle open and closed above signal MA.
+//       - Red     = candle open and closed below signal MA.
+//       - Yellow  = Candle stradle across  signal MA.
+//       the Grab candles scheme:
+//       - Lime    = Bull candle open and closed above  signal MA.
+//       - Green   = Bear candle open and closed above  signal MA.
+//       - Red     = Bull candle open and closed below  signal MA.
+//       - DarkRed = Bear candle open and closed below  signal MA.
+//       - Aqua    = Bull candle closed across signal MA.
+//       - Blue    = Bear candle stradle across signal MA.
+//    7. Alert entry arrows generated within a Trend or at the start of a new trend.
+//       - An Uptrend is defined as anchored fast (8ema) above anchored signal (21ema) above
+//         anchored medium (50ema).
+//       - A Downtrend is defined as anchored fast (8ema) below anchored signal (21ema) below
+//         anchored medium (50ema).
+//       - A Pullback generates an red (short entry) or green (long entry) arrow when price
+//         crosses anchored fast or signal MAs which then crosses back to return to trend direction
+//         and breaks the previous Fractal low/high.
+//       - A Trend Break, which is defined as any of the MAs crossing breaking trend, generates a 
+//         blue (short) or aqua (long) arrow and then make new trend (in same or new trend direction).
+//
+// HINTS:
+// ======
+//  I cannot go into a full description, as Pullback trading incorporates a full trading Methodology,
+//  there are many articles and books written on the subject.
+//
+//  - I like to add the "Sweetspot Gold RN" indicator to the chart as well to help with support and resistance
+//    finding and shows where the important round number, "00", lines are.
+//  - First on a weekly basis say Sunday night or Monday morning, analyse the Daily and Weekly charts
+//    to identify overall trends, and major support/resistant levels. Draw significant trend lines,
+//    vertical trend lines (VTL) and S/R levels. Use Pivots option to guide VTL drawing and use Fractals
+//    to help guide TL drawing.
+//  - Once the trend direction and any potential major reversals highlighted, drop down to the 60min chart
+//    and draw appropriate  mini Trend line matching the established momentum direction. Take note of
+//    potential pull backs from and of the EMAs: 8EMA,21EMA and the 50EMA. Can use the
+//    Fractals and HH/LL points to guide your TL drawing.
+//  - Check to see if the TL is broken and is pulling back off one of the EMA lines, then trade
+//    that alert, or drop down to lower time frames (TF) and perform the same analysis there and trade at the lower
+//    TF. Trading at lower TF you will be able to get tighter Stop loss settings.
+//  - Other than the SweetSpot Gold RN indicator, you should not require any other indicator to trade trends
+//    for pull backs and reversals.
+//  - Set the optional Anchor time frame to 60min, then tigher SLs and earlier entries can be made
+//    on the lower time frames 15min or 5min.
+//  - The Alert arrows should only be considered as guide entries, they will not always be correct. They
+//    tend to show better results on Heikin Ashi and Renko charts. 
+//  - I have been using this tool myself for some months and I'm getting good results. You must employ
+//    a good money management plan with any methology.
+//  - Remember this tool is trading Pullbacks whilst you have a good trend present, use other techniques for a
+//    non-trending or ranging market.
+//  - Try some of your own tests and setup varitions.
+//
+//
+// Revisions:
+//
+//  R1.0 - Original Published version by JustUncleL.
+//
+//  13-Jan-2018 
+//       - Fix bug in Anchor calculations when chart Time frame not intraday.
+//
+//  R1.1 23-Feb-2018 
+//       - Added Fractal Chaos Channel option for S/R Levels.
+//       - Changed Fractals to Dots on the High/Low instead of triangles above/below.
+//
+//  R2   06-Apr-2018
+//       - Added option to Anchor the base fast MA Ribbon. 
+//       - Added Gray fill colouring to Main Anchored MAs, making it Ribbon like.
+//       - Change alert definition to be the 1st Fractal Break after trend continue
+//         detection.
+//       - Change Anchor to be based purely on Minutes, so 1month=30240mins (21 trading days),
+//         1 week=7200mins (5 trading days), 1 Day=1440mins. This makes it more 
+//         consistent across intraday and extraday chart Timeframes.
+//
+// References:
+//  - Pullback Trading Tool R#.# by JustUncleL
+//  - SweetSpot Gold RN by JustUncleL
+//  - http://www.swing-trade-stocks.com/pullbacks.html
+//
+//
+// -----------------------------------------------------------------------------
+// Copyright 2017,2018 JustUncleL
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// The GNU General Public License can be found here
+// <http://www.gnu.org/licenses/>.
+//
+// -----------------------------------------------------------------------------
+//
 
 
+// === INPUTS ===
+
+// Un-Anchored Fast + Slow MA - Type and Length
+ma_src = input(close, title='Source for All Moving Averages')
+showMAs = input(true, title='Show MA Ribbon')
+anchorRibbon = input(true, title='Anchor MA Ribbon')
+fastType = input.string(defval='EMA', title='Fast Ribbon MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+fastLen_ = input.int(defval=5, title='Fast Ribbon MA Length:', minval=1)
+slowType = input.string(defval='EMA', title='Slow Ribbon MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+slowLen_ = input.int(defval=12, title='Slow Ribbon MA Length:', minval=1)
+//
+// Anchor Higher Time Frame
+anchor = input.int(0, minval=0, maxval=1440, title='Anchor TimeFrame in Mins (0=none, 1D=1440, 1W=7200)')
+//
+// Anchored Fast+ Medium + Slow MA + Signal - type, length
+fastAnchorType = input.string(defval='EMA', title='Fast Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+fastAnchorLen_ = input.int(defval=35, title='Fast Anchored MA Length:', minval=1)
+mediumAnchorType = input.string(defval='EMA', title='Medium Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+mediumAnchorLen_ = input.int(defval=65, title='Medium Anchored MA Length:', minval=1)
+useSlowMA = input(false, title='Show Slow Anchored MA')
+slowAnchorType = input.string(defval='EMA', title='Slow Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+slowAnchorLen_ = input.int(defval=200, title='Slow Anchored MA Length:', minval=1)
+// Signal MA
+signalType = input.string(defval='EMA', title='Signal Anchored MA Type: ', options=['SMA', 'EMA', 'WMA', 'VWMA', 'SMMA', 'DEMA', 'TEMA', 'HullMA', 'ZEMA', 'TMA', 'SSMA'])
+signalLen_ = input.int(defval=50, title='Signal Anchored MA Length:', minval=1)
+//
+ShowBreak = input(false, title='Show Entrys for Trend Breaks')
+ShowPB = input(false, title='Show Entrys for PB Fractal Breaks')
+closeBr = input(true, title='Use Close Break instead Touch Fractal Break')
+Lookback = input.int(6, minval=1, title='Pull Back Lookback Length')
+//
+ShowBarColor = input(true, title='Show coloured Bars close relative to Signal MA')
+useGrabClr = input(true, title='Use Grab Candle (6-tone) Colouring, instead of Standard (3-tone)')
+// Pivots
+ShowPivots = input(true, title='Show Pivot Points')
+pvtLenL = input.int(2, minval=1, title='Pivot Length Left Hand Side')
+pvtLenR = input.int(2, minval=1, title='Pivot Length Right Hand Side')
+ShowSRLevels = input(false, title='Show S/R Level Extensions')
+ShowChannel = input(false, title='Show Levels as a Fractal Chaos Channel')
+maxLvlLen = input.int(0, minval=0, title='Maximum S/R Level Extension Length')
+uRenko = input(false, title='Use Renko Style Pivots (open/close for high/low)')
+//
+ShowHHLL = input(true)
+
+//
+//
+// --- CONSTANTS ---
+DodgerBlue = #1E90FF
+Gold = #FFD700
+// --- /CONTANTS ---
+//
+
+// Constants colours that include fully non-transparent option.
+GREEN = #008000FF
+LIME = #00FF00FF
+RED = #FF0000FF
+BLUE = #0000FFFF
+AQUA = #00FFFFFF
+DARKRED = #8B0000FF
+GRAY = #808080FF
+YELLOW = #FFFF00FF
+GOLD = #FFD700FF
+DODGERBLUE = #1E90FFFF
+
+//
+// === /INPUTS ===
+
+// === FUNCTIONS ===
+
+// - variant(type, src, len)
+// Returns MA input selection variant, default to SMA if blank or typo.
+
+// SuperSmoother filter
+// ֲ© 2013  John F. Ehlers
+variant_supersmoother(src, len) =>
+    a1 = math.exp(-1.414 * 3.14159 / len)
+    b1 = 2 * a1 * math.cos(1.414 * 3.14159 / len)
+    c2 = b1
+    c3 = -a1 * a1
+    c1 = 1 - c2 - c3
+    v9 = 0.0
+    v9 := c1 * (src + nz(src[1])) / 2 + c2 * nz(v9[1]) + c3 * nz(v9[2])
+    v9
+
+variant_smoothed(src, len) =>
+    v5 = 0.0
+    sma_1 = ta.sma(src, len)
+    v5 := na(v5[1]) ? sma_1 : (v5[1] * (len - 1) + src) / len
+    v5
+
+variant_zerolagema(src, len) =>
+    ema1 = ta.ema(src, len)
+    ema2 = ta.ema(ema1, len)
+    v10 = ema1 + ema1 - ema2
+    v10
+
+variant_doubleema(src, len) =>
+    v2 = ta.ema(src, len)
+    v6 = 2 * v2 - ta.ema(v2, len)
+    v6
+
+variant_tripleema(src, len) =>
+    v2 = ta.ema(src, len)
+    v7 = 3 * (v2 - ta.ema(v2, len)) + ta.ema(ta.ema(v2, len), len)  // Triple Exponential
+    v7
+
+// return variant, defaults to SMA 
+variant(type, src, len) =>
+    ema_1 = ta.ema(src, len)
+    wma_1 = ta.wma(src, len)
+    vwma_1 = ta.vwma(src, len)
+    variant_smoothed__1 = variant_smoothed(src, len)
+    variant_doubleema__1 = variant_doubleema(src, len)
+    variant_tripleema__1 = variant_tripleema(src, len)
+    wma_2 = ta.wma(src, len / 2)
+    wma_3 = ta.wma(src, len)
+    wma_4 = ta.wma(2 * wma_2 - wma_3, math.round(math.sqrt(len)))
+    variant_supersmoother__1 = variant_supersmoother(src, len)
+    variant_zerolagema__1 = variant_zerolagema(src, len)
+    sma_1 = ta.sma(src, len)
+    sma_2 = ta.sma(sma_1, len)
+    sma_3 = ta.sma(src, len)
+    type == 'EMA' ? ema_1 : type == 'WMA' ? wma_1 : type == 'VWMA' ? vwma_1 : type == 'SMMA' ? variant_smoothed__1 : type == 'DEMA' ? variant_doubleema__1 : type == 'TEMA' ? variant_tripleema__1 : type == 'HullMA' ? wma_4 : type == 'SSMA' ? variant_supersmoother__1 : type == 'ZEMA' ? variant_zerolagema__1 : type == 'TMA' ? sma_2 : sma_3
+
+// - /variant 
+
+// === /FUNCTIONS ===
+
+// === SERIES ===
+
+// If have anchor specified, calculate the base multiplier.
+mult = timeframe.isintraday ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor ? 1 : math.round(anchor / timeframe.multiplier) : 1
+mult := timeframe.isdwm ? timeframe.isdaily ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor or anchor <= 1440 ? 1 : math.round(anchor / 1440) : timeframe.isweekly ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor or anchor <= 7200 ? 1 : math.round(anchor / 7200) : timeframe.ismonthly ? anchor == 0 or timeframe.multiplier <= 0 or timeframe.multiplier >= anchor or anchor <= 30240 ? 1 : math.round(anchor / 30240) : 1 : mult
+
+//adjust MA lengths with Anchor Multiplier
+fastAnchorLen = mult == 1 ? fastAnchorLen_ : fastAnchorLen_ * mult
+mediumAnchorLen = mult == 1 ? mediumAnchorLen_ : mediumAnchorLen_ * mult
+slowAnchorLen = mult == 1 ? slowAnchorLen_ : slowAnchorLen_ * mult
+signalLen = mult == 1 ? signalLen_ : signalLen_ * mult
+fastLen = anchorRibbon ? mult == 1 ? fastLen_ : fastLen_ * mult : fastLen_
+slowLen = anchorRibbon ? mult == 1 ? slowLen_ : slowLen_ * mult : slowLen_
+
+// Get the two MAs
+fastMA = variant(fastType, ma_src, fastLen)
+slowMA = variant(slowType, ma_src, slowLen)
+//
+fastAnchorMA = variant(fastAnchorType, ma_src, fastAnchorLen)
+mediumAnchorMA = variant(mediumAnchorType, ma_src, mediumAnchorLen)
+slowAnchorMA = variant(slowAnchorType, ma_src, slowAnchorLen)
+//
+signalMA = variant(signalType, ma_src, signalLen)
+
+// - PIVOT VARIABLES
+//
+high_ = uRenko ? math.max(close, open) : high
+low_ = uRenko ? math.min(close, open) : low
+
+
+// Get High and Low Pivot Points
+pvthi = ta.pivothigh(high_, pvtLenL, pvtLenR)
+pvtlo = ta.pivotlow(low_, pvtLenL, pvtLenR)
+
+//  ||-----------------------------------------------------------------------------------------------------||
+//  ||---   Higher Highs, Lower Highs, Higher Lows, Lower Lows  -------------------------------------------||
+valuewhen_1 = ta.valuewhen(pvthi, high_[pvtLenR], 1)
+valuewhen_2 = ta.valuewhen(pvthi, high_[pvtLenR], 0)
+higherhigh = na(pvthi) ? na : valuewhen_1 < valuewhen_2 ? pvthi : na
+valuewhen_3 = ta.valuewhen(pvthi, high_[pvtLenR], 1)
+valuewhen_4 = ta.valuewhen(pvthi, high_[pvtLenR], 0)
+lowerhigh = na(pvthi) ? na : valuewhen_3 > valuewhen_4 ? pvthi : na
+valuewhen_5 = ta.valuewhen(pvtlo, low_[pvtLenR], 1)
+valuewhen_6 = ta.valuewhen(pvtlo, low_[pvtLenR], 0)
+higherlow = na(pvtlo) ? na : valuewhen_5 < valuewhen_6 ? pvtlo : na
+valuewhen_7 = ta.valuewhen(pvtlo, low_[pvtLenR], 1)
+valuewhen_8 = ta.valuewhen(pvtlo, low_[pvtLenR], 0)
+lowerlow = na(pvtlo) ? na : valuewhen_7 > valuewhen_8 ? pvtlo : na
+
+// === /SERIES ===
+
+// === PLOTTING ===
+// 
+// Colour bars according to the close position relative to the PAC selected.
+bColour = open > signalMA and close > signalMA ? DODGERBLUE : open < signalMA and close < signalMA ? RED : YELLOW
+bColour := not useGrabClr ? bColour : open > signalMA and close > signalMA ? open > close ? GREEN : LIME : open < signalMA and close < signalMA ? open > close ? DARKRED : RED : open > close ? BLUE : AQUA
+barcolor(ShowBarColor ? bColour : na, title='Signal Bar Colours')
+
+// Draw the EMA ribbon
+p1 = plot(showMAs ? fastMA : na, color=ta.rising(fastMA, 2) ? color.aqua : color.fuchsia, join=true, linewidth=1, title='Fast MA', transp=10)
+p2 = plot(showMAs ? slowMA : na, color=ta.rising(slowMA, 2) ? color.aqua : color.fuchsia, join=true, linewidth=1, title='Slow MA', transp=10)
+fill(p1, p2, color=fastMA > slowMA ? color.aqua : color.fuchsia, title='Ribbon Fill', transp=90)
+
+
+//
+plot(signalMA, color=color.new(Gold, 20), join=true, style=plot.style_circles, linewidth=2, title='Signal MA')
+
+var label _laSTP1 = na
+label.delete(_laSTP1)
+_laSTP1 := label.new(x=time, y=signalMA, text=str.format("{0,number,#.#}% STP ${1,number,#.##}",(close-signalMA)/close*100, signalMA), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(Gold,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laSTP1, label.get_x(_laSTP1) + math.round(ta.change(time)*2))
+label.delete(_laSTP1[1])
+
+
+//
+p3 = plot(fastAnchorMA, color=color.new(DodgerBlue, 20), join=true, style=plot.style_line, linewidth=1, title='Fast Anchored MA')
+p4 = plot(mediumAnchorMA, color=color.new(color.green, 20), join=true, style=plot.style_line, linewidth=1, title='Medium Anchored MA')
+plot(useSlowMA ? slowAnchorMA : na, color=color.new(color.gray, 20), join=true, style=plot.style_circles, linewidth=2, title='Slow Anchored MA')
+fill(p3, p4, color=color.new(color.gray, 90), title='Anchored MA Fill')
+
+
+// If selected Display the HH/LL above/below candle.
+plotshape(ShowHHLL ? higherhigh : na, title='HH', style=shape.triangleup, location=location.abovebar, color=color.new(color.lime, 20), text='HH', offset=-pvtLenR)
+plotshape(ShowHHLL ? lowerhigh : na, title='LH', style=shape.triangleup, location=location.abovebar, color=color.new(color.red, 20), text='LH', offset=-pvtLenR)
+plotshape(ShowHHLL ? higherlow : na, title='HL', style=shape.triangledown, location=location.belowbar, color=color.new(color.lime, 20), text='HL', offset=-pvtLenR)
+plotshape(ShowHHLL ? lowerlow : na, title='LL', style=shape.triangledown, location=location.belowbar, color=color.new(color.red, 20), text='LL', offset=-pvtLenR)
+
+
+// If Selected Display Pivot points
+//plotshape(ShowPivots ? pvthi :na, title='High Pivot *', location=location.abovebar, style=shape.triangleup,color=green, offset=-pvtLenR,transp=0,size=size.auto)
+//plotshape(ShowPivots ? pvtlo :na,  title='Low Pivot *', location=location.belowbar, style=shape.triangledown,color=maroon, offset=-pvtLenR,transp=0,size=size.auto)
+plot(ShowPivots and not ShowHHLL ? pvthi : na, title='High Pivot *', style=plot.style_circles, join=false, color=color.new(color.white, 50), offset=-pvtLenR, linewidth=3)
+plot(ShowPivots and not ShowHHLL ? pvtlo : na, title='Low Pivot *', style=plot.style_circles, join=false, color=color.new(color.white, 50), offset=-pvtLenR, linewidth=3)
+plot(ShowPivots and not ShowHHLL ? pvthi : na, title='High Pivot *', style=plot.style_circles, join=false, color=color.new(color.green, 0), offset=-pvtLenR, linewidth=2)
+plot(ShowPivots and not ShowHHLL ? pvtlo : na, title='Low Pivot *', style=plot.style_circles, join=false, color=color.new(color.maroon, 0), offset=-pvtLenR, linewidth=2)
+
+float _pvthl = na
+_pvthl := _pvthl[1]
+float _close = na
+_close := close
+var label _laSTP = na
+if pvtlo
+    _pvthl:=pvtlo
+    label.delete(_laSTP)
+    _laSTP := label.new(x=time, y=pvtlo, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+if pvthi
+    _pvthl:=pvthi
+    label.delete(_laSTP)
+    _laSTP := label.new(x=time, y=pvthi, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)))
+label.set_text(_laSTP, str.format("{0,number,#.#}% STP ${1,number,#.##} {2}",(_close-_pvthl)/_close*100,_close,higherlow?'HL':lowerlow?'LL':higherhigh?'HH':lowerhigh?'LH':''))
+
+
+//Count How many candles for current Pivot Level, If new reset.
+counthi = 0
+countlo = 0
+counthi := pvthi ? 0 : nz(counthi[1]) + 1
+countlo := pvtlo ? 0 : nz(countlo[1]) + 1
+
+pvthis = high
+pvtlos = low
+pvthis := pvthi ? high[pvtLenR] : nz(pvthis[1], high)
+pvtlos := pvtlo ? low[pvtLenR] : nz(pvtlos[1], low)
+
+hipc = pvthis != pvthis[1] ? na : color.green
+lopc = pvtlos != pvtlos[1] ? na : color.maroon
+
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or counthi < maxLvlLen) ? pvthis : na, color=hipc, linewidth=1, offset=-pvtLenR, title='Top Levels', transp=0)
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or countlo < maxLvlLen) ? pvtlos : na, color=lopc, linewidth=1, offset=-pvtLenR, title='Bottom Levels', transp=0)
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or counthi < maxLvlLen) ? pvthis : na, color=hipc, linewidth=1, offset=0, title='Top Levels 2', transp=0)
+plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or countlo < maxLvlLen) ? pvtlos : na, color=lopc, linewidth=1, offset=0, title='Bottom Levels 2', transp=0)
+
+// Show Levels as a Fractal Chaos Channel
+plot(ShowSRLevels and ShowChannel ? pvthis : na, color=color.new(color.green, 0), linewidth=1, offset=0, title='Top Chaos Channel', trackprice=false)
+plot(ShowSRLevels and ShowChannel ? pvtlos : na, color=color.new(color.maroon, 0), linewidth=1, offset=0, title='Bottom Chaos Channel', trackprice=false)
+
+
+// === /PLOTTING ===
+//
+
+// === ALERTS ===
+
+//Trend Definition
+
+tr_up = slowMA > mediumAnchorMA and slowMA > fastAnchorMA and slowMA > signalMA and fastMA > mediumAnchorMA and fastMA > fastAnchorMA and fastMA > signalMA
+
+//fastAnchorMA>mediumAnchorMA and fastAnchorMA>signalMA and ((signalLen<mediumAnchorLen and signalMA>mediumAnchorMA) or (signalLen>mediumAnchorLen and mediumAnchorMA>signalMA))
+tr_down = slowMA < mediumAnchorMA and slowMA < fastAnchorMA and slowMA < signalMA and fastMA < mediumAnchorMA and fastMA < fastAnchorMA and fastMA < signalMA
+//fastAnchorMA<mediumAnchorMA and fastAnchorMA<signalMA and ((signalLen<mediumAnchorLen and signalMA<mediumAnchorMA) or (signalLen>mediumAnchorLen and mediumAnchorMA<signalMA))
+
+//PB Entry
+pullbackUpT = 0
+pullbackDnT = 0
+//pullbackUpC = 0
+//pullbackDnC = 0
+//pullbackUpC := tr_up and low<=slowMA? nz(pullbackUpC[1])+1 : 0
+pullbackUpT := tr_up and high[1] < pvthis and high > pvthis and (not closeBr or close > pvthis) ? nz(pullbackUpT[1]) + 1 : 0
+//pullbackUpT := tr_up and close>open and (open<signalMA) and close>signalMA   and barssince(nz(pullbackUpT[1])==1)>Lookback? nz(pullbackUpT[1])+1 : pullbackUpT
+//
+//pullbackDnC := tr_down and high>=slowMA ? nz(pullbackDnC[1])+1 : 0
+pullbackDnT := tr_down and low[1] > pvtlos and low < pvtlos and (not closeBr or close < pvtlos) ? nz(pullbackDnT[1]) + 1 : 0
+// and barssince(nz(pullbackDnT[1])==1)>Lookback? nz(pullbackDnT[1])+1 : 0
+//pullbackDnT := tr_down and close<open and (open>signalMA) and close<signalMA   and barssince(nz(pullbackDnT[1])==1)>Lookback? nz(pullbackDnT[1])+1 : pullbackDnT
+
+//
+plotarrow(ShowBreak and tr_up and not tr_up[1] ? 1 : na, title='Trend Break Up Entry Arrow', colorup=color.new(color.aqua, 0), maxheight=60, minheight=50)
+plotarrow(ShowBreak and tr_down and not tr_down[1] ? -1 : na, title='Trend Break Down Entry Arrow', colordown=color.new(color.blue, 0), maxheight=60, minheight=50)
+
+//Plot Arrows for Buy Sell Signals
+plotarrow(ShowPB and pullbackUpT == 1 ? pullbackUpT : na, title='PB Up Entry Arrow', colorup=color.new(color.lime, 0), maxheight=60, minheight=50)
+plotarrow(ShowPB and pullbackDnT == 1 ? -pullbackDnT : na, title='PB Down Entry Arrow', colordown=color.new(color.red, 0), maxheight=60, minheight=50)
+
+// ---debug
+//plotchar(pvthis, location=location.bottom, transp=0)
+//plotchar(pvtlos, location=location.bottom, transp=0)
+//plotchar(pullbackUpT, location=location.bottom, transp=0)
+//plotchar(pullbackDnT, location=location.bottom, transp=0)
+//plotchar(tr_up, location=location.bottom, transp=0)
+//plotchar(tr_down, location=location.bottom, transp=0)
+// ---/debug
+
+// --- Any LONG and SHORT
+alertcondition(tr_up and not tr_up[1] or pullbackUpT == 1, title='Alert LONG', message='LONG')
+alertcondition(tr_down and not tr_down[1] or pullbackDnT == 1, title='Alert SHORT', message='SHORT')
+//
+// --- Individual LONG and Shorts
+alertcondition(tr_up and not tr_up[1], title='Trend Break Up', message='BREAK LONG')
+alertcondition(tr_down and not tr_down[1], title='Trend Break Down', message='BREAK SHORT')
+alertcondition(pullbackUpT == 1, title='PB Up', message='PB LONG')
+alertcondition(pullbackDnT == 1, title='PB Down', message='PB SHORT')
+
+
+// === /ALERTS ===
+
+// === eof
 
 

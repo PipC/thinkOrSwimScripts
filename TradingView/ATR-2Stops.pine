@@ -59,11 +59,14 @@ lenH55 = input.int(55, minval=1, title="HMA #H55")
 
 sma_srcH55H = input(high, title="HMA Source #H55 High")
 outH55H = ta.hma(sma_srcH55H, lenH55)
-plot(outH55H, title="SMA #H55H", color=close >= outH55H ? ( outH55H > outH55H[1] ? color.lime : (close > outH55H ? color.white : color.silver) ) :  color.gray, linewidth = 2, style=plot.style_circles)
+plot55H=plot(stopBelowHMA55 ? outH55H : na, title="SMA #H55H", color=color.new(close >= outH55H ? ( outH55H > outH55H[1] ? color.lime : (close > outH55H ? color.white : color.silver) ) :  color.gray, 50), linewidth = 2, style=plot.style_circles)
 
 sma_srcH55L = input(low, title="HMA Source #H55 Low")
 outH55L = ta.hma(sma_srcH55L, lenH55)
-plot(outH55L, title="SMA #H55L", color=close >= outH55L ? ( outH55L > outH55L[1] ? color.lime : (close > outH55L ? color.white : color.silver) ) :  color.gray, linewidth = 1, style=plot.style_circles)
+plot55L=plot(stopBelowHMA55 ? outH55L : na, title="SMA #H55L", color=color.new(close >= outH55L ? ( outH55L > outH55L[1] ? color.lime : (close > outH55L ? color.white : color.silver) ) :  color.gray, 50), linewidth = 1, style=plot.style_circles)
+
+outH55M=(outH55L+outH55H)/2
+fill(plot55L, plot55H, color=color.new(close >=  outH55M ? ( outH55M > outH55M[1] ? color.lime : (close > outH55M ? color.white : color.silver) ) :  color.gray, 90), title='HMA 55 High-Low Fill')
 
 lenA = input.int(5, minval=1, title="SMA #5")
 srcA = input(close, title="SMA Source #5")
@@ -76,6 +79,11 @@ outB = ta.sma(srcB, lenB)
 plot(outB, title="SMA #20", color=outB >= outB[1] ? color.orange : color.orange, linewidth = 1)
 
 
+lenC = input.int(50, minval=1, title="SMA #50")
+srcC = input(close, title="SMA Source #50")
+outC = ta.sma(srcC, lenB)
+plot(outC, title="SMA #50", color=outC >= outC[1] ? color.red: color.fuchsia, linewidth = 1)
+
 lenD = input.int(100, minval=1, title="EMA #100")
 ema_srcD = input(close, title="EMA Source #100")
 outD = ta.ema(ema_srcD, lenD)
@@ -84,7 +92,13 @@ plot(outD, title="EMA #100", color=outD >= outD[1] ? color.gray : color.maroon, 
 lenE = input.int(200, minval=1, title="EMA #200")
 ema_srcE = input(close, title="EMA Source #200")
 outE = ta.ema(ema_srcE, lenE)
-plot(outE, title="EMA #200", color=outE >= outE[1] ? color.white : color.fuchsia, linewidth = 3)
+plot(outE, title="EMA #200", color=outE >= outE[1] ? color.white : color.yellow, linewidth = 3)
+
+var label _laMA200 = na
+label.delete(_laMA200)
+_laMA200 := label.new(x=time+1, y=outE, text=str.format("{1,number,#.#}% SMA200 ${0,number,#.##}",outE,(close-outE)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow,30), textcolor=color.black, size=size.small, style=label.style_label_left)
+// label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)*2))
+// label.delete(_laSTP[1])
 
 bgColor = color.new( close > outE and close > (pos>1?outH55H:outH55L) ? color.lime : color.red,95)
 bgcolor(bgColor)
@@ -316,7 +330,8 @@ plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new
 var label _laVWAP = na
 label.delete(_laVWAP)
 _laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% VWAP ${0,number,#.##}",multiDayVWAP,(close-multiDayVWAP)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.white,80), textcolor=color.white, size=size.small, style=label.style_label_left)
-
+label.set_x(_laVWAP, label.get_x(_laVWAP) + math.round(ta.change(time)*1.2))
+label.delete(_laVWAP[1])
 
 
 // // part 3
@@ -411,3 +426,24 @@ _laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% 
 // barcolor(spc2 and iscrossUp2() ? (iscrossUp2() ? color.yellow : na) : na)
 // barcolor(spc2 and iscrossDown2() ? (iscrossDown2() ? color.yellow : na) : na)
 // //part3 end
+
+
+
+var label _laTradeSize = na
+label.delete(_laTradeSize)
+var _orderPrice = close
+_orderPrice := close
+var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
+_orderSize := math.round(tradeMaxAmount/_orderPrice,0)
+_laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
+label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
+label.delete(_laTradeSize[1])
+var tbl = table.new(position=position.bottom_right, columns=2, rows=5, border_width = 1)
+table.cell(tbl, 0, 0, 'Entry Price', bgcolor=#cccccc, text_size=size.small)
+table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.yellow, text_size=size.small)
+table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=size.small)
+table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.yellow, text_size=size.small)
+table.cell(tbl, 0, 2, 'Order Size', bgcolor=#cccccc, text_size=size.small)
+table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=size.small)
+// table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
+// table.cell(tbl, 1, 2, str.tostring(stop, "#.####"), bgcolor=sl_color)
