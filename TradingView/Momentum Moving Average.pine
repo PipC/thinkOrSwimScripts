@@ -182,7 +182,7 @@ if isBackTest
         table.cell(tbl, 3, 0, str.tostring((win/trades)*100, "#") + "%", text_size=size.small, text_halign=text.align_left, text_color=color.white, bgcolor=color.new((win/trades)>0.5?color.green:color.red,50))
 
         table.cell(tbl, 0, 1, "Gain/Loss %:", text_size=size.small, text_halign=text.align_left, text_color=color.white, bgcolor=color.new(boxColor,40))
-        table.cell(tbl, 1, 1, str.tostring((estimated/tradeMaxAmount - 1) * 100, "#") + "%", text_size=size.small, text_halign=text.align_left, text_color=color.white, bgcolor=color.new((estimated/tradeMaxAmount - 1)>0.5?color.green:color.red,50))
+        table.cell(tbl, 1, 1, str.tostring((estimated/tradeMaxAmount - 1) * 100, "#") + "%", text_size=size.small, text_halign=text.align_left, text_color=color.white, bgcolor=color.new((estimated/tradeMaxAmount - 1)>0?color.green:color.red,50))
         table.cell(tbl, 2, 1, "Win/Loss:", text_size=size.small, text_halign=text.align_left, text_color=color.white, bgcolor=color.new(boxColor,40))
         table.cell(tbl, 3, 1, str.tostring(win) + "/" + str.tostring(loss), text_size=size.small, text_halign=text.align_left, text_color=color.white, bgcolor=color.new((win/loss)>0.5?color.green:color.red,50))
 
