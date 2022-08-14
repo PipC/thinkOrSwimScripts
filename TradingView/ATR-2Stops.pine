@@ -112,51 +112,6 @@ _laATR := label.new(x=time+2, y=xATRTrailingStop, text=str.format("{1,number,#.#
 
 plot(xATRTrailingStop2, color=color, title="ATR Trailing Stop", linewidth=1)
 
-//if ( strategy.opentrades == 0) or true
-if (pos==1) and (strategy.opentrades == 0)  and (not stopBelowHMA55 or (stopBelowHMA55 and  close > outH55H ))
-    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
-    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high+syminfo.mintick, qty=tradeMaxAmount/(high)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
-
-if (pos==1) and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
-    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
-
-if pos==-1
-    strategy.exit("LX", stop=low)
-//    var label _laSELL = na
-//    label.delete(_laSELL)
-//    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("${0,number,#.#} ~ {1,number,#.##}%",xATRTrailingStop, 100*(1-xATRTrailingStop/high)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
-
-if stopBelowHMA55 and ( close < outH55L)  // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
-    strategy.exit("X55L", stop=outH55L)
-
-if pos==1  and pos[1]==-1
-    var label _laBUY = na
-    //label.delete(_laBUY)
-    //if close > high[1]+syminfo.mintick
-    _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_right)
-
-
-if pos==-1 and pos[1]==1
-    var label _laSELL = na
-    //label.delete(_laSELL)
-    //if close < low[1]-syminfo.mintick
-    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
-
-
-if (stopBelowHMA55)
-    var trend = false
-    trend := (pos==1)
-    var label _la55STP = na
-    label.delete(_la55STP)
-    _la55STP := label.new(x=time+1, y=(trend?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",(trend?outH55L:outH55H), 100*(1-(trend?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
-
-
-
-var label _laSTP = na
-label.delete(_laSTP)
-_laSTP := label.new(x=timenow+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //// INPUTS
@@ -278,15 +233,15 @@ if barstate.islast
 //// END
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-
 // User Options
 vwapLookbackDays = input.int(title="VWAP Anchor Lookback (days)",  defval=55)
 
 // Functions
+var now = last_bar_time
 getTotalLookbackDays(lookbackWeekdays) =>
     // Calculate actual lookback days from weekdays
     int lookbackDays = lookbackWeekdays
-    int currentWeekday = dayofweek(timenow)-1
+    int currentWeekday = dayofweek(now)-1
     if (lookbackWeekdays > currentWeekday)
         int weekdaysEachWeek = 5
         int weekendDaysEachWeek = 2
@@ -302,7 +257,7 @@ isNewPeriod(res) =>
 // Calculate beginning and ending range for VWAP
 int lookback = getTotalLookbackDays(vwapLookbackDays)
 milliseconds_in_lookback_days = 1000 * 60 * 60 * 24 * lookback
-leftborder = timenow - time < milliseconds_in_lookback_days
+leftborder = now - time < milliseconds_in_lookback_days
 rightborder = barstate.islast
 
 // VWAP Variables
@@ -330,8 +285,9 @@ plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new
 var label _laVWAP = na
 label.delete(_laVWAP)
 _laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% VWAP ${0,number,#.##}",multiDayVWAP,(close-multiDayVWAP)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.white,80), textcolor=color.white, size=size.small, style=label.style_label_left)
-label.set_x(_laVWAP, label.get_x(_laVWAP) + math.round(ta.change(time)*1.2))
+label.set_x(_laVWAP, label.get_x(_laVWAP) + math.round(ta.change(time)*1.5))
 label.delete(_laVWAP[1])
+
 
 
 // // part 3
@@ -428,22 +384,127 @@ label.delete(_laVWAP[1])
 // //part3 end
 
 
+// TradingTablePosition=input(title="Trading Table Position", defval=position.bottom_right)
+// TradingTableSize=input(title="Trading Table Size", defval=size.tiny)
+// showTradingTable=input.bool(title="Show Trading Table", defval=true)
+// if showTradingTable
+//     var label _laTradeSize = na
+//     label.delete(_laTradeSize)
+//     var _orderPrice = close
+//     _orderPrice := close
+//     var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
+//     _orderSize := math.round(tradeMaxAmount/_orderPrice,0)
+//     _laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
+//     label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
+//     label.delete(_laTradeSize[1])
+//     var tbl = table.new(position=TradingTablePosition, columns=2, rows=5, border_width = 1)
+//     table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+//     table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+//     table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+//     table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+//     table.cell(tbl, 0, 2, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=size.small)
+//     table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+//     // table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
 
+var _stopLossPrecent = 0.03
+_stopLossPrecent := (close - xATRTrailingStop2) / close
+
+ShowTradingTable=input.bool(title="Show Trading Table", defval=true)
+TradingAccountTotal = input.float(title="Trading Account Total", step=1000, defval=10000.0)
+TradingStopLossAllow=input.float(title="Trading Stop Loss Allowance(%)", step=0.1, defval=3)
+TradingTableLayout=input.string(title="Trading Table Layout", defval="2x4", options=["1x8","4x2","2x4"])
+TradingTablePosition=input.string(title="Trading Table Position", defval=position.top_right, options=[position.bottom_center, position.bottom_left, position.bottom_right, position.middle_center, position.middle_left, position.middle_right, position.top_center, position.top_left, position.top_right])
+TradingTableSize=input.string(title="Trading Table Size", defval=size.normal, options=[size.auto, size.huge, size.large, size.normal, size.small, size.tiny])
 var label _laTradeSize = na
 label.delete(_laTradeSize)
 var _orderPrice = close
 _orderPrice := close
-var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
-_orderSize := math.round(tradeMaxAmount/_orderPrice,0)
-_laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
-label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
-label.delete(_laTradeSize[1])
-var tbl = table.new(position=position.bottom_right, columns=2, rows=5, border_width = 1)
-table.cell(tbl, 0, 0, 'Entry Price', bgcolor=#cccccc, text_size=size.small)
-table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.yellow, text_size=size.small)
-table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=size.small)
-table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.yellow, text_size=size.small)
-table.cell(tbl, 0, 2, 'Order Size', bgcolor=#cccccc, text_size=size.small)
-table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=size.small)
-// table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
-// table.cell(tbl, 1, 2, str.tostring(stop, "#.####"), bgcolor=sl_color)
+var _orderSize = math.round(TradingAccountTotal/_orderPrice,0)
+var _stopLossAllow = TradingStopLossAllow/100
+_orderSize := math.round(TradingAccountTotal*_stopLossAllow/_stopLossPrecent/_orderPrice,0)
+var _StopLossDetails = ""
+_StopLossDetails := str.tostring(TradingAccountTotal*_stopLossAllow, "#.#")+" (STP%"+str.tostring(_stopLossPrecent*100, "#.#")+", AC%"+str.tostring(_stopLossAllow*100, "#.#")+")"
+if ShowTradingTable
+    if TradingTableLayout == "4x2"
+        var tbl = table.new(position=TradingTablePosition, rows=4, columns=2, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 2, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+        table.cell(tbl, 0, 3, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 3, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "1x8"
+        var tbl = table.new(position=TradingTablePosition, rows=1, columns=8, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 4, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 5, 0, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+        table.cell(tbl, 6, 0, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 7, 1, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "2x4"
+        var tbl = table.new(position=TradingTablePosition, rows=2, columns=4, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 1, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 3, 1, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+
+
+
+
+var __orderSize = _orderSize
+__orderSize := tradeMaxAmount < _orderSize*close ? tradeMaxAmount/close : _orderSize
+
+//if ( strategy.opentrades == 0) or true
+if (pos==1) and (strategy.opentrades == 0)  and (not stopBelowHMA55 or (stopBelowHMA55 and  close > outH55H ))
+    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
+    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high+syminfo.mintick, qty=tradeMaxAmount/(high)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+
+if (pos==1) and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
+    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
+
+if pos==-1
+    strategy.exit("LX", stop=low)
+//    var label _laSELL = na
+//    label.delete(_laSELL)
+//    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("${0,number,#.#} ~ {1,number,#.##}%",xATRTrailingStop, 100*(1-xATRTrailingStop/high)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
+
+if stopBelowHMA55 and ( close < outH55L)  // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+    strategy.exit("X55L", stop=outH55L)
+    var _outH55LStop = (close - outH55L) / close
+    _stopLossPrecent := _outH55LStop < _stopLossPrecent? _outH55LStop: _stopLossPrecent
+
+if pos==1  and pos[1]==-1
+    var label _laBUY = na
+    //label.delete(_laBUY)
+    //if close > high[1]+syminfo.mintick
+    _laBUY := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_right)
+
+
+if pos==-1 and pos[1]==1
+    var label _laSELL = na
+    //label.delete(_laSELL)
+    //if close < low[1]-syminfo.mintick
+    _laSELL := label.new(x=time, y=xATRTrailingStop, text=str.format("{1,number,#.#}%",xATRTrailingStop,(1-xATRTrailingStop/low)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_left)
+
+
+if (stopBelowHMA55)
+    var trend = false
+    trend := (pos==1)
+    var label _la55STP = na
+    label.delete(_la55STP)
+    _la55STP := label.new(x=time+1, y=(trend?outH55L:outH55H), text=str.format("{1,number,#.#}% H55STP ${0,number,#.##}",(trend?outH55L:outH55H), 100*(1-(trend?outH55L:outH55H)/close)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.yellow, 20), textcolor=color.black, size=size.small, style=label.style_label_left)
+
+
+
+var label _laSTP = na
+label.delete(_laSTP)
+_laSTP := label.new(x=timenow+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
+

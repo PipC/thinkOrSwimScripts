@@ -1,7 +1,7 @@
 //@version=5
 //
 
-indicator(title='Pullback Trading Tool ALT', shorttitle='PBTOOLA R2.0', overlay=true)
+strategy(title='Pullback Trading Tool ALT', shorttitle='PBTOOLA R2.0', overlay=true)
 
 //
 //
@@ -133,6 +133,10 @@ indicator(title='Pullback Trading Tool ALT', shorttitle='PBTOOLA R2.0', overlay=
 
 
 // === INPUTS ===
+tradeMaxAmount = input.float(title="Trading Amount", step=1000, defval=10000.0)
+stopLossPrecent=input.float(title="Stop Loss Precentage %", step=0.5, defval=5)
+stopBelowHMA55=input.bool(title="Stop Below HMA55", defval=true)
+
 
 // Un-Anchored Fast + Slow MA - Type and Length
 ma_src = input(close, title='Source for All Moving Averages')
@@ -169,12 +173,12 @@ useGrabClr = input(true, title='Use Grab Candle (6-tone) Colouring, instead of S
 ShowPivots = input(true, title='Show Pivot Points')
 pvtLenL = input.int(2, minval=1, title='Pivot Length Left Hand Side')
 pvtLenR = input.int(2, minval=1, title='Pivot Length Right Hand Side')
-ShowSRLevels = input(false, title='Show S/R Level Extensions')
+ShowSRLevels = input(true, title='Show S/R Level Extensions')
 ShowChannel = input(false, title='Show Levels as a Fractal Chaos Channel')
 maxLvlLen = input.int(0, minval=0, title='Maximum S/R Level Extension Length')
 uRenko = input(false, title='Use Renko Style Pivots (open/close for high/low)')
 //
-ShowHHLL = input(true)
+ShowHHLL = input(false)
 
 //
 //
@@ -325,13 +329,8 @@ fill(p1, p2, color=fastMA > slowMA ? color.aqua : color.fuchsia, title='Ribbon F
 
 
 //
-plot(signalMA, color=color.new(Gold, 20), join=true, style=plot.style_circles, linewidth=2, title='Signal MA')
+plot(signalMA, color=ta.rising(signalMA, 2) ? color.new(Gold, 30) : color.new(color.fuchsia, 30), join=true, style=plot.style_circles, linewidth=2, title='Signal MA')
 
-var label _laSTPma = na
-label.delete(_laSTPma)
-_laSTPma := label.new(x=time, y=signalMA, text=str.format("{0,number,#.#}% STP ${1,number,#.##}",(close-signalMA)/close*100, signalMA), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(Gold,50), textcolor=color.white, size=size.small, style=label.style_label_left)
-label.set_x(_laSTPma, label.get_x(_laSTPma) + math.round(ta.change(time)*2))
-label.delete(_laSTPma[1])
 
 
 //
@@ -363,18 +362,41 @@ float _pvthi = na
 float _close = na
 _close := close
 var label _laSTP = na
+var label _laSTPL =na
+var label _laSTPH =na
 if pvtlo
     _pvthl:=pvtlo
-    _pvtlo := pvtlo
-    label.delete(_laSTP[1]) //for debug
-    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+//    label.delete(_laSTP[1])
+//    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,50), textcolor=color.white, size=size.small, style=label.style_label_left)
 if pvthi
     _pvthl:=pvthi
-    _pvthi := pvthi
-    label.delete(_laSTP[1]) //for debug
-    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,50), textcolor=color.white, size=size.small, style=label.style_label_left)
-label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)))
-label.set_text(_laSTP, str.format("{0,number,#.#}% STP ${1,number,#.##} {2}",(_close-_pvthl)/_close*100,_close,higherlow?'HL':lowerlow?'LL':higherhigh?'HH':lowerhigh?'LH':''))
+//    label.delete(_laSTP[1])
+//    _laSTP := label.new(x=time, y=_pvthl, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,50), textcolor=color.white, size=size.small, style=label.style_label_left)
+if _pvthl
+    if higherlow or lowerlow
+        _pvtlo = _pvthl
+        label.delete(_laSTPL)
+        _laSTPL := label.new(x=time, y=_pvtlo, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,60), textcolor=color.white, size=size.small, style=label.style_label_upper_left)
+    if higherhigh or lowerhigh
+        _pvthi = _pvthl
+        label.delete(_laSTPH)
+        _laSTPH := label.new(x=time, y=_pvthi, xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.white, size=size.small, style=label.style_label_lower_left)
+
+label.set_text(_laSTPH, str.format("{0,number,#.#}% STP H ${1,number,#.##} {2}",(close-label.get_y(_laSTPH))/close*100,label.get_y(_laSTPH), higherhigh?'HH':lowerhigh?'LH':'R/S'))
+label.set_text(_laSTPL, str.format("{0,number,#.#}% STP L ${1,number,#.##} {2}",(close-label.get_y(_laSTPL))/close*100,label.get_y(_laSTPL), higherlow?'HL':lowerlow?'LL':'R/S'))
+
+//
+label.set_x(_laSTPL, label.get_x(_laSTPL) + math.round(ta.change(time)))
+label.set_x(_laSTPH, label.get_x(_laSTPH) + math.round(ta.change(time)))
+//label.delete(_laSTP)
+//label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)))
+//label.set_text(_laSTP, str.format("{0,number,#.#}% STP ${1,number,#.##} {2}",(_close-label.get_y(_laSTP))/_close*100,label.get_y(_laSTP),higherlow?'HL':lowerlow?'LL':higherhigh?'HH':lowerhigh?'LH':''))
+
+var label _laSTPma = na
+label.delete(_laSTPma)
+_laSTPma := label.new(x=time, y=signalMA, text=str.format("{0,number,#.#}% STP MA ${1,number,#.##}",(close-signalMA)/close*100, signalMA), color=color.new(GOLD,80), xloc=xloc.bar_time, yloc=yloc.price, textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laSTPma, label.get_x(_laSTPma) + math.round(ta.change(time)*2))
+
 
 //Count How many candles for current Pivot Level, If new reset.
 counthi = 0
@@ -398,6 +420,62 @@ plot(ShowSRLevels and not ShowChannel and (maxLvlLen == 0 or countlo < maxLvlLen
 // Show Levels as a Fractal Chaos Channel
 plot(ShowSRLevels and ShowChannel ? pvthis : na, color=color.new(color.green, 0), linewidth=1, offset=0, title='Top Chaos Channel', trackprice=false)
 plot(ShowSRLevels and ShowChannel ? pvtlos : na, color=color.new(color.maroon, 0), linewidth=1, offset=0, title='Bottom Chaos Channel', trackprice=false)
+
+
+// User Options
+vwapLookbackDays = input.int(title="VWAP Anchor Lookback (days)",  defval=55)
+
+// Functions
+var now = last_bar_time
+getTotalLookbackDays(lookbackWeekdays) =>
+    // Calculate actual lookback days from weekdays
+    int lookbackDays = lookbackWeekdays
+    int currentWeekday = dayofweek(now)-1
+    if (lookbackWeekdays > currentWeekday)
+        int weekdaysEachWeek = 5
+        int weekendDaysEachWeek = 2
+        int weekendsToOffset = math.ceil((lookbackWeekdays - currentWeekday) / weekdaysEachWeek)
+        int offsetWeekendDays = weekendDaysEachWeek * weekendsToOffset
+        lookbackDays := offsetWeekendDays + lookbackWeekdays
+    lookbackDays
+isNewPeriod(res) =>
+    // Helper function for finding new bars/periods by resolution
+    t = time(res)
+    newbar = not na(t) and (na(t[1]) or t > t[1])
+
+// Calculate beginning and ending range for VWAP
+int lookback = getTotalLookbackDays(vwapLookbackDays)
+milliseconds_in_lookback_days = 1000 * 60 * 60 * 24 * lookback
+leftborder = now - time < milliseconds_in_lookback_days
+rightborder = barstate.islast
+
+// VWAP Variables
+float cumulativePV = na
+float cumulativeVOL = na
+float multiDayVWAP = na
+bool newDay = isNewPeriod("D")
+var startedNewPeriod = false
+bool insideLookbackRange = (leftborder and not rightborder) or rightborder
+
+// Start plotting new VWAP period if it's a new day, inside our lookback range, and only if we haven't already started a new period
+bool startNewPeriod = newDay and insideLookbackRange and not startedNewPeriod
+if (startNewPeriod)
+    startedNewPeriod := true
+
+// Calculate cumulative totals & VWAP as documented below
+// VWAP Docs: https://www.investopedia.com/terms/v/vwap.asp
+cumulativePV := startNewPeriod ? (hlc3 * volume) : (cumulativePV[1] + hlc3 * volume)
+cumulativeVOL := startNewPeriod ? volume : (cumulativeVOL[1] + volume)
+multiDayVWAP := (cumulativePV / cumulativeVOL)
+
+// Plots
+plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new(#ffffff,30), linewidth=1, style=plot.style_stepline)
+
+var label _laVWAP = na
+label.delete(_laVWAP)
+_laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% VWAP ${0,number,#.##}",multiDayVWAP,(close-multiDayVWAP)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.white,80), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laVWAP, label.get_x(_laVWAP) + math.round(ta.change(time)*1.5))
+label.delete(_laVWAP[1])
 
 
 // === /PLOTTING ===
@@ -428,12 +506,12 @@ pullbackDnT := tr_down and low[1] > pvtlos and low < pvtlos and (not closeBr or 
 //pullbackDnT := tr_down and close<open and (open>signalMA) and close<signalMA   and barssince(nz(pullbackDnT[1])==1)>Lookback? nz(pullbackDnT[1])+1 : pullbackDnT
 
 //
-plotarrow(ShowBreak and tr_up and not tr_up[1] ? 1 : na, title='Trend Break Up Entry Arrow', colorup=color.new(color.aqua, 0), maxheight=60, minheight=50)
-plotarrow(ShowBreak and tr_down and not tr_down[1] ? -1 : na, title='Trend Break Down Entry Arrow', colordown=color.new(color.blue, 0), maxheight=60, minheight=50)
+plotarrow(ShowBreak and tr_up and not tr_up[1] ? 1 : na, title='Trend Break Up Entry Arrow', colorup=color.new(color.aqua, 30), maxheight=60, minheight=30)
+plotarrow(ShowBreak and tr_down and not tr_down[1] ? -1 : na, title='Trend Break Down Entry Arrow', colordown=color.new(color.blue, 30), maxheight=60, minheight=30)
 
 //Plot Arrows for Buy Sell Signals
-plotarrow(ShowPB and pullbackUpT == 1 ? pullbackUpT : na, title='PB Up Entry Arrow', colorup=color.new(color.lime, 0), maxheight=60, minheight=50)
-plotarrow(ShowPB and pullbackDnT == 1 ? -pullbackDnT : na, title='PB Down Entry Arrow', colordown=color.new(color.red, 0), maxheight=60, minheight=50)
+plotarrow(ShowPB and pullbackUpT == 1 ? pullbackUpT : na, title='PB Up Entry Arrow', colorup=color.new(color.lime, 30), maxheight=60, minheight=30)
+plotarrow(ShowPB and pullbackDnT == 1 ? -pullbackDnT : na, title='PB Down Entry Arrow', colordown=color.new(color.red, 30), maxheight=60, minheight=30)
 
 // ---debug
 //plotchar(pvthis, location=location.bottom, transp=0)
@@ -455,8 +533,98 @@ alertcondition(pullbackUpT == 1, title='PB Up', message='PB LONG')
 alertcondition(pullbackDnT == 1, title='PB Down', message='PB SHORT')
 
 
+
+// var label _laTradeSize = na
+// label.delete(_laTradeSize)
+// var _orderPrice = close
+// _orderPrice := close
+// var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
+// _orderSize := math.round(tradeMaxAmount/_orderPrice,0)
+// _laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
+// label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
+// label.delete(_laTradeSize[1])
+// var tbl = table.new(position=position.bottom_right, columns=2, rows=5, border_width = 1)
+// table.cell(tbl, 0, 0, 'Entry Price', bgcolor=#cccccc, text_size=size.small)
+// table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.yellow, text_size=size.small)
+// table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=size.small)
+// table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.yellow, text_size=size.small)
+// table.cell(tbl, 0, 2, 'Order Size', bgcolor=#cccccc, text_size=size.small)
+// table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=size.small)
+// // table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
+// // table.cell(tbl, 1, 2, str.tostring(stop, "#.####"), bgcolor=sl_color)
+
 // === /ALERTS ===
 
 // === eof
 
+
+lenE = input(200, title="SMA #E")
+srcE = input(close, title="SMA Source #E")
+outE = ta.sma(srcE, lenE)
+plot(outE, title="SMA #E", color=close >= outE ? color.maroon : color.maroon, linewidth = 3)
+///
+
+var _stopLossPrecent = (close-label.get_y(_laSTPL))/close
+_stopLossPrecent := (close-label.get_y(_laSTPL))/close
+
+ShowTradingTable=input.bool(title="Show Trading Table", defval=true)
+TradingAccountTotal = input.float(title="Trading Account Total", step=1000, defval=10000.0)
+TradingStopLossAllow=input.float(title="Trading Stop Loss Allowance(%)", step=0.1, defval=3)
+TradingTableLayout=input.string(title="Trading Table Layout", defval="2x4", options=["1x8","4x2","2x4"])
+TradingTablePosition=input.string(title="Trading Table Position", defval=position.top_right, options=[position.bottom_center, position.bottom_left, position.bottom_right, position.middle_center, position.middle_left, position.middle_right, position.top_center, position.top_left, position.top_right])
+TradingTableSize=input.string(title="Trading Table Size", defval=size.normal, options=[size.auto, size.huge, size.large, size.normal, size.small, size.tiny])
+var label _laTradeSize = na
+label.delete(_laTradeSize)
+var _orderPrice = high
+_orderPrice := high
+var _orderSize = math.round(TradingAccountTotal/_orderPrice,0)
+var _stopLossAllow = TradingStopLossAllow/100
+_orderSize := math.round(TradingAccountTotal*_stopLossAllow/_stopLossPrecent/_orderPrice,0)
+var _StopLossDetails = ""
+_StopLossDetails := str.tostring(TradingAccountTotal*_stopLossAllow, "#.#")+" (STP%"+str.tostring(_stopLossPrecent*100, "#.#")+",AC%"+str.tostring(_stopLossAllow*100, "#.#")+")"
+if ShowTradingTable
+    if TradingTableLayout == "4x2"
+        var tbl = table.new(position=TradingTablePosition, rows=4, columns=3, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 2, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=_orderSize>0?color.white:color.red, text_size=TradingTableSize)
+        table.cell(tbl, 0, 3, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 3, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "1x8"
+        var tbl = table.new(position=TradingTablePosition, rows=1, columns=8, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 4, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 5, 0, str.tostring(_orderSize, "#.#"), bgcolor=_orderSize>0?color.white:color.red, text_size=TradingTableSize)
+        table.cell(tbl, 6, 0, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 7, 0, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "2x4"
+        var tbl = table.new(position=TradingTablePosition, rows=2, columns=4, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 1, str.tostring(_orderSize, "#.#"), bgcolor=_orderSize>0?color.white:color.red, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 3, 1, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+
+var __orderSize = _orderSize
+__orderSize := tradeMaxAmount < _orderSize*high or _orderSize < 0 ? 0 : _orderSize
+
+if tr_up and not tr_up[1] or pullbackUpT == 1
+    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high+syminfo.mintick, qty=__orderSize) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+
+if tr_down and not tr_down[1] or pullbackDnT == 1
+    strategy.entry("SE", direction=strategy.short, comment="LE", stop=low-syminfo.mintick, qty=__orderSize) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+
+if strategy.position_size > 0 and ta.crossunder( close,  signalMA)
+    strategy.exit("LX", stop=low)
+if strategy.position_size > 0 and ta.crossunder( close,  signalMA)
+    strategy.exit("SX", stop=high)
 

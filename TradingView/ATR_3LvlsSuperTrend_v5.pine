@@ -86,23 +86,26 @@ sellSignal_3 = trend_3 == -1 and trend_3[1] == 1
 mPlot_3 = plot(ohlc4, title="", style=plot.style_circles, linewidth=0)
 
 
+
 var label _laS1 = na
 label.delete(_laS1)
 if trend_1 > 0
-    _laS1 := label.new(x=time+1, y=up_1, text=str.format("{1,number,#.#}% STP ${0,number,#.##}",up_1,(1-up_1/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.rgb(0,100,0), textcolor=color.white, size=size.small, style=label.style_label_lower_left)
+    _laS1 := label.new(x=time+1, y=up_1, text=str.format("{1,number,#.#}% STP 1 ${0,number,#.##}",up_1,(1-up_1/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.rgb(0,100,0), textcolor=color.white, size=size.small, style=label.style_label_lower_left)
 
 var label _laS2 = na
 label.delete(_laS2)
 if trend_2 > 0
-    _laS2 := label.new(x=time+1, y=up_2, text=str.format("{1,number,#.#}% STP ${0,number,#.##}",up_2,(1-up_2/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.rgb(0,125,0), textcolor=color.white, size=size.small, style=label.style_label_left)
+    _laS2 := label.new(x=time+1, y=up_2, text=str.format("{1,number,#.#}% STP 2 ${0,number,#.##}",up_2,(1-up_2/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.rgb(0,125,0), textcolor=color.white, size=size.small, style=label.style_label_left)
 
 var label _laS3 = na
 label.delete(_laS3)
+
+var _stopLossPrecent = 0.03
 if trend_3 > 0
-    _laS3 := label.new(x=time+1, y=up_3, text=str.format("{1,number,#.#}% STP ${0,number,#.##}",up_3,(1-up_3/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.rgb(0,150,0), textcolor=color.white, size=size.small, style=label.style_label_upper_left)
-
-
-
+    _laS3 := label.new(x=time+1, y=up_3, text=str.format("{1,number,#.#}% STP 3 ${0,number,#.##}",up_3,(1-up_3/high)*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.rgb(0,150,0), textcolor=color.white, size=size.small, style=label.style_label_upper_left)
+    _stopLossPrecent := 1-up_3/high
+else
+    _stopLossPrecent := _stopLossPrecent[1]
 
 //changeCond = trend != trend[1]
 
@@ -221,53 +224,6 @@ if _recentHigh < high
 var _recentLow = low
 if _recentLow > low
     _recentLow := low
-
-//BACKTEST ORDER ENTRY
-//alertcondition((trend_1 > 0 and trend_2 > 0 and trend_3 > 0) and (buySignal_1 or buySignal_2 or buySignal_3) and close > outE, "SuperTrend Change Up", "SuperTrend Change Up")
-//alertcondition((trend_1 < 0 and trend_2 < 0 and trend_3 < 0) and (sellSignal_1 or sellSignal_2 or sellSignal_3), "SuperTrend Change Down", "SuperTrend Change Down")
-
-//if ((buySignal_1 or buySignal_2 or buySignal_3) or ((trend_1 > 0 and trend_2 > 0 and trend_3 > 0) and close > outH55H)) and (strategy.opentrades == 0)
-//if ( strategy.opentrades == 0 and STBuySignal)
-//if ( strategy.opentrades == 0) or true
-if (STBuySignal) and (strategy.opentrades == 0) and (not stopBelowHMA55 or (stopBelowHMA55 and  close > outH55H ))
-    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
-    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high, qty=tradeMaxAmount/(high+syminfo.mintick)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
-
-
-if (STBuySignal) and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
-    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
-
-
-if (sellSignal_2 or sellSignal_3) and (strategy.position_size > 0)
-    //strategy.cancel_all()
-    //strategy.order("LX", direction=strategy.short, qty=strategy.position_size, comment="LX", when=close < math.max(dn_1, dn_2, dn_3))
-    strategy.order("LS", direction=strategy.short, qty=strategy.position_size, when=low < _recentHigh*(100-stopLossPrecent)/100)
-
-
-if (STSellSignal) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
-    strategy.exit("XX", stop=low)
-
-if stopBelowHMA55 and ( close < outH55L) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
-    strategy.exit("X55L", stop=outH55L)
-
-// if STSellSignal
-//     //strategy.exit("X2", stop=low, comment="X2")
-//     strategy.close_all(comment="X1")
-// else
-//     if ((sellSignal_1 or sellSignal_2 or sellSignal_3) or close < outH55L) and ((recentHigh - close) / recentHigh) > stopLossPrecent/100
-//         strategy.exit("X2", stop=recentHigh*(100-stopLossPrecent)/100, comment="X2")
-//     else
-//         strategy.exit("X3", stop=recentHigh*(100-stopLossPrecent)/100, comment="X3") // Set a TP at the high of the signal candle.
-//    else
-    //    strategy.cancel_all()
-//        strategy.exit("S1", stop=highest(source=high, length=10)*(100-longStopLossPrecent)/100, comment="S1") // Set a TP at the high of the signal candle.
-
-//if ((sellSignal_1 or sellSignal_2 or sellSignal_3) or ((trend_1 < 0 and trend_2 < 0 and trend_3 < 0) and close < outH55L))  and (strategy.opentrades == 0)
-//	strategy.entry("SE", strategy.short, comment="SE", stop=low - syminfo.mintick)
-//	strategy.exit("SX", stop=low*1.03, comment="SX") // Set a TP at the high of the signal candle.
-
-//if (strategy.opentrades > 0) and (buySignal_1 or buySignal_2 or buySignal_3 or close > outH55H)
-//    strategy.exit("SX", stop=high, comment="SX")
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -395,10 +351,11 @@ if barstate.islast
 vwapLookbackDays = input.int(title="VWAP Anchor Lookback (days)",  defval=55)
 
 // Functions
+var now = last_bar_time
 getTotalLookbackDays(lookbackWeekdays) =>
     // Calculate actual lookback days from weekdays
     int lookbackDays = lookbackWeekdays
-    int currentWeekday = dayofweek(timenow)-1
+    int currentWeekday = dayofweek(now)-1
     if (lookbackWeekdays > currentWeekday)
         int weekdaysEachWeek = 5
         int weekendDaysEachWeek = 2
@@ -414,7 +371,7 @@ isNewPeriod(res) =>
 // Calculate beginning and ending range for VWAP
 int lookback = getTotalLookbackDays(vwapLookbackDays)
 milliseconds_in_lookback_days = 1000 * 60 * 60 * 24 * lookback
-leftborder = timenow - time < milliseconds_in_lookback_days
+leftborder = now - time < milliseconds_in_lookback_days
 rightborder = barstate.islast
 
 // VWAP Variables
@@ -442,6 +399,8 @@ plot(insideLookbackRange ? multiDayVWAP : na, title="VWAP (RM)", color=color.new
 var label _laVWAP = na
 label.delete(_laVWAP)
 _laVWAP := label.new(x=time+1, y=multiDayVWAP, text=str.format("{1,number,#.#}% VWAP ${0,number,#.##}",multiDayVWAP,(close-multiDayVWAP)/close*100), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.white,80), textcolor=color.white, size=size.small, style=label.style_label_left)
+label.set_x(_laVWAP, label.get_x(_laVWAP) + math.round(ta.change(time)*1.5))
+label.delete(_laVWAP[1])
 
 
 
@@ -456,26 +415,82 @@ if (stopBelowHMA55)
 
 var label _laSTP = na
 label.delete(_laSTP)
-_laSTP := label.new(x=time+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
+_laSTP := label.new(x=time+1, y=close*(1-stopLossPrecent/100), text=str.format("{0,number,#.#}% STP H55 ${1,number,#.##}",stopLossPrecent,close*(1-stopLossPrecent/100)), xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.fuchsia,30), textcolor=color.white, size=size.small, style=label.style_label_left)
 // label.set_x(_laSTP, label.get_x(_laSTP) + math.round(ta.change(time)*2))
 // label.delete(_laSTP[1])
 
+
+
+ShowTradingTable=input.bool(title="Show Trading Table", defval=true)
+TradingAccountTotal = input.float(title="Trading Account Total", step=1000, defval=10000.0)
+TradingStopLossAllow=input.float(title="Trading Stop Loss Allowance(%)", step=0.1, defval=3)
+TradingTableLayout=input.string(title="Trading Table Layout", defval="2x4", options=["1x8","4x2","2x4"])
+TradingTablePosition=input.string(title="Trading Table Position", defval=position.top_right, options=[position.bottom_center, position.bottom_left, position.bottom_right, position.middle_center, position.middle_left, position.middle_right, position.top_center, position.top_left, position.top_right])
+TradingTableSize=input.string(title="Trading Table Size", defval=size.normal, options=[size.auto, size.huge, size.large, size.normal, size.small, size.tiny])
 
 var label _laTradeSize = na
 label.delete(_laTradeSize)
 var _orderPrice = close
 _orderPrice := close
-var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
-_orderSize := math.round(tradeMaxAmount/_orderPrice,0)
-_laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
-label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
-label.delete(_laTradeSize[1])
-var tbl = table.new(position=position.bottom_right, columns=2, rows=5, border_width = 1)
-table.cell(tbl, 0, 0, 'Entry Price', bgcolor=#cccccc, text_size=size.small)
-table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.yellow, text_size=size.small)
-table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=size.small)
-table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.yellow, text_size=size.small)
-table.cell(tbl, 0, 2, 'Order Size', bgcolor=#cccccc, text_size=size.small)
-table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=size.small)
-// table.cell(tbl, 0, 2, 'Stop Signal', bgcolor=#cccccc)
-// table.cell(tbl, 1, 2, str.tostring(stop, "#.####"), bgcolor=sl_color)
+var _orderSize = math.round(TradingAccountTotal/_orderPrice,0)
+var _stopLossAllow = TradingStopLossAllow/100
+_orderSize := math.round(TradingAccountTotal*_stopLossAllow/_stopLossPrecent/_orderPrice,0)
+var _StopLossDetails = ""
+_StopLossDetails := str.tostring(TradingAccountTotal*_stopLossAllow, "#.#")+" (STP%"+str.tostring(_stopLossPrecent*100, "#.#")+",AC%"+str.tostring(_stopLossAllow*100, "#.#")+")"
+if ShowTradingTable
+    if TradingTableLayout == "4x2"
+        var tbl = table.new(position=TradingTablePosition, rows=4, columns=2, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 2, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+        table.cell(tbl, 0, 3, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 3, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "1x8"
+        var tbl = table.new(position=TradingTablePosition, rows=1, columns=8, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 4, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 5, 0, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+        table.cell(tbl, 6, 0, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 7, 1, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "2x4"
+        var tbl = table.new(position=TradingTablePosition, rows=2, columns=4, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 1, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, '⛔️Stop Loss', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 3, 1, _StopLossDetails, bgcolor=color.white, text_size=TradingTableSize)
+
+var __orderSize = _orderSize
+__orderSize := tradeMaxAmount < _orderSize*high ? tradeMaxAmount/high : _orderSize
+
+if (STBuySignal) and (strategy.opentrades == 0) and (not stopBelowHMA55 or (stopBelowHMA55 and  close > outH55H ))
+    //strategy.entry("B1", strategy.long, comment="B1", stop= high + syminfo.mintick, qty=tradeMaxAmount/high)
+    strategy.entry("LE", direction=strategy.long, comment="LE", stop=high, qty=__orderSize) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+
+
+if (STBuySignal) and (strategy.position_size > 0) //or (trend_1 > 0 and trend_2 > 0 and trend_3 > 0)
+    strategy.order("LC", direction=strategy.short, qty=strategy.position_size, when=low < strategy.position_avg_price *(100-stopLossPrecent)/100)
+
+
+if (sellSignal_2 or sellSignal_3) and (strategy.position_size > 0)
+    //strategy.cancel_all()
+    //strategy.order("LX", direction=strategy.short, qty=strategy.position_size, comment="LX", when=close < math.max(dn_1, dn_2, dn_3))
+    strategy.order("LS", direction=strategy.short, qty=strategy.position_size, when=low < _recentHigh*(100-stopLossPrecent)/100)
+
+
+if (STSellSignal) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+    strategy.exit("XX", stop=low)
+
+if stopBelowHMA55 and ( close < outH55L) and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+    strategy.exit("X55L", stop=outH55L)
+
+
