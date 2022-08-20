@@ -1,7 +1,22 @@
-//@version=4
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © philchan2008
 
-study("SCTR & ONeil RS", shorttitle="SCTR with COLOR", precision = 1)
+//@version=5
+strategy("SCTR & ONeil + RSI strategy", margin_long=100, margin_short=100, shorttitle="SCTR+RSI", overlay = false, format=format.price, precision       = 1)
+
+//longCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))
+//if (longCondition)
+//    strategy.entry("My Long Entry Id", strategy.long)
+
+//shortCondition = ta.crossunder(ta.sma(close, 14), ta.sma(close, 28))
+//if (shortCondition)
+//    strategy.entry("My Short Entry Id", strategy.short)
+
 //
+tradeMaxAmount = input.int(title="Trading Amount", step=1000, defval=10000)
+
+strategyOrderType = input.string(title="Strategy Order Type", defval="ST+RSI", options=["ST+RSI","ST","RSI","ST||RSI"])
+
 value = input (close, "value")
 Fc = input(3,"Multiplier")
 LT_Rate = input (60,"LT_% Rate")
@@ -17,15 +32,15 @@ MT_ROC = input(20,"MT_ROC")
 ST_EMA = input (9,"ST_EMA")
 ST_RSI = input(14,"ST_RSI")
 //Long term integer
-LT_EMAV = ((value - ema(value,LT_EMA)) / ema(value,LT_EMA))*100
-LT_ROCV = roc(value,LT_ROC)
+LT_EMAV = ((value - ta.ema(value,LT_EMA)) / ta.ema(value,LT_EMA))*100
+LT_ROCV = ta.roc(value,LT_ROC)
 
 //Middle term integer
-MT_EMAV = (value - ema(value,MT_EMA)) / ema(value,MT_EMA)
-MT_ROCV = roc(value,MT_ROC)
+MT_EMAV = (value - ta.ema(value,MT_EMA)) / ta.ema(value,MT_EMA)
+MT_ROCV = ta.roc(value,MT_ROC)
 //Short term integer
-ST_EMAV = ((value - ema(value,ST_EMA)) / ema(value,ST_EMA))*100
-ST_RSIV = (rsi(value,ST_RSI))-50
+ST_EMAV = ((value - ta.ema(value,ST_EMA)) / ta.ema(value,ST_EMA))*100
+ST_RSIV = (ta.rsi(value,ST_RSI))-50
 //
 LT_Val = LT_Rate*0.01*((LT_EMAV + LT_ROCV)/2)
 MT_Val = MT_Rate*0.01*((MT_EMAV + MT_ROCV)/2)
@@ -34,19 +49,19 @@ SCTR = 50+(Fc*(LT_Val + MT_Val + ST_Val))
 SCTRV = SCTR >= 0.1 and SCTR <= 99.9 ? SCTR : SCTR > 99.9 ? 99.9 : SCTR < 0.1 ? 0.1 : na
 //SCTR2 = SCTR > 120 ? ( SCTR > 200 ? SCTR / 4 : SCTR / 2) : SCTR < 0 ? ( SCTR / 3 ) : SCTR
 CL = 50
-LINE_COLOR= SCTRV > 80 ? color.lime : SCTRV > 50 ? color.gray : color.orange
-plot(SCTRV,"SCTR",color =LINE_COLOR, linewidth=1, style=plot.style_stepline, transp=60)
+LINE_COLOR= SCTRV >= 99 ? color.aqua : SCTRV > 80 ? color.lime : SCTRV > 50 ? color.gray : color.orange
+plot(SCTRV,"SCTR",color =LINE_COLOR, linewidth=1, style=plot.style_stepline, transp=20)
 //plot(SCTR2,"SCTR Project", color=gray)
 plot(CL,"CL",color = color.blue, linewidth = 1 )
 
 
 price = close
 
-//  1 Wk ¡V 5 trading days
-//  1 Mos ¡V 21 Days
-//  3 Mos ¡V 63 Days
-//  6 Mos ¡V 126 Days
-//  12 Mos ¡V 252 Days
+//  1 Wk – 5 trading days
+//  1 Mos – 21 Days
+//  3 Mos – 63 Days
+//  6 Mos – 126 Days
+//  12 Mos – 252 Days
 
 v_year    = price-price[252] < 0 ? 0 : price-price[252]
 v_nine    = price-price[189] < 0 ? 0 : price-price[189]
@@ -54,26 +69,20 @@ v_six     = price-price[126] < 0 ? 0 : price-price[126]
 v_three   = price-price[63 ] < 0 ? 0 : price-price[63 ]
 v_weighted=  ((2*v_three) + v_six + v_nine + v_year)/4 < 0 ? 0 : ((2*v_three + v_six + v_nine + v_year)/4)
 
-h = highest(high, 252)
-l = lowest(low, 252)
-hilo = abs(h-l)
+h = ta.highest(high, 252)
+l = ta.lowest(low, 252)
+hilo = math.abs(h-l)
 calc = v_weighted/ hilo
 middleLevel = 50
 
 plot(middleLevel, title="Middle Level", color=color.white, linewidth=1, style=plot.style_line)
 
-rsrank = round(100* calc)
+plot(0, title="Zero Level", color=color.new(color.red,80), linewidth=1, style=plot.style_line)
+plot(100, title="100 Level", color=color.new(color.green,80), linewidth=1, style=plot.style_line)
 
-plot_color = rsrank > 50 ? color.green : color.red
+rsrank = math.round(100* calc)
 
-//if RSRank > 80 then color.dark_green else
-//                       if RSRank > 60 and RSRank <= 80 then createcolor(0,175,0) else
-//                       if RSRank > 40 and RSRank <= 60 then color.gray else
-//                       if RSRank > 20 and RSRank <= 40 then CreateColor(220, 0,0) else
-//                       if RSRank <= 20 then CreateColor(150, 0,0) else
-//                       color.white
 
-plot(rsrank, title="RS Rank", color=plot_color, linewidth=1, style=plot.style_line)
 
 //rs10avg = sma(rsrank, 10)
 //rs20avg = sma(rsrank, 20)
@@ -85,13 +94,185 @@ plot(rsrank, title="RS Rank", color=plot_color, linewidth=1, style=plot.style_li
 //plot(rs50avg, title="RS 50", color=color.orange, linewidth=2, style=plot.style_line)
 //plot(rs100avg, title="RS 100", color=color.red, linewidth=2, style=plot.style_line)
 
-plot(ema(rsrank,7),title="7",color=#f7df9b,linewidth=1,transp=0)
-plot(ema(rsrank,14),title="14",color=#f1c789,linewidth=1,transp=0)
-plot(ema(rsrank,21),title="21",color=#e59a67,linewidth=1,transp=0)
-plot(ema(rsrank,28),title="28",color=#d66e46,linewidth=1,transp=0)
-plot(ema(rsrank,35),title="35",color=#c14c32,linewidth=1,transp=0)
-plot(ema(rsrank,42),title="42",color=#a43328,linewidth=1,transp=0)
-plot(ema(rsrank,49),title="49",color=#861f24,linewidth=1,transp=0)
-plot(ema(rsrank,56),title="56",color=#711120,linewidth=1,transp=0)
+plot(ta.ema(rsrank,7),title="7",color=#f7df9b,linewidth=1,transp=0)
+plot(ta.ema(rsrank,14),title="14",color=#f1c789,linewidth=1,transp=30)
+plot(ta.ema(rsrank,21),title="21",color=#e59a67,linewidth=1,transp=30)
+plot(ta.ema(rsrank,28),title="28",color=#d66e46,linewidth=1,transp=30)
+plot(ta.ema(rsrank,35),title="35",color=#c14c32,linewidth=1,transp=30)
+plot(ta.ema(rsrank,42),title="42",color=#a43328,linewidth=1,transp=30)
+plot(ta.ema(rsrank,49),title="49",color=#861f24,linewidth=1,transp=30)
+plot(ta.ema(rsrank,56),title="56",color=#711120,linewidth=2,transp=0)
+
+plot_color = rsrank > ta.ema(rsrank,7) ? (rsrank > 50 ? color.green : color.white) : color.red
+
+//if RSRank > 80 then color.dark_green else
+//                       if RSRank > 60 and RSRank <= 80 then createcolor(0,175,0) else
+//                       if RSRank > 40 and RSRank <= 60 then color.gray else
+//                       if RSRank > 20 and RSRank <= 40 then CreateColor(220, 0,0) else
+//                       if RSRank <= 20 then CreateColor(150, 0,0) else
+//                       color.white
+
+plot(rsrank, title="RS Rank", color=plot_color, style=plot.style_line, linewidth=2)
 
 
+ma(source, length, type) =>
+    switch type
+        "SMA" => ta.sma(source, length)
+        "Bollinger Bands" => ta.sma(source, length)
+        "EMA" => ta.ema(source, length)
+        "SMMA (RMA)" => ta.rma(source, length)
+        "WMA" => ta.wma(source, length)
+        "VWMA" => ta.vwma(source, length)
+
+rsiLengthInput = input.int(14, minval=1, title="RSI Length", group="RSI Settings")
+rsiSourceInput = input.source(close, "Source", group="RSI Settings")
+maTypeInput = input.string("SMA", title="MA Type", options=["SMA", "Bollinger Bands", "EMA", "SMMA (RMA)", "WMA", "VWMA"], group="MA Settings")
+maLengthInput = input.int(14, title="MA Length", group="MA Settings")
+bbMultInput = input.float(2.0, minval=0.001, maxval=50, title="BB StdDev", group="MA Settings")
+
+up = ta.rma(math.max(ta.change(rsiSourceInput), 0), rsiLengthInput)
+down = ta.rma(-math.min(ta.change(rsiSourceInput), 0), rsiLengthInput)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+rsiMA = ma(rsi, maLengthInput, maTypeInput)
+isBB = maTypeInput == "Bollinger Bands"
+
+plot(rsi, "RSI", color=color.new(rsi>rsiMA?#00ff2f:#fd2280,10), style=plot.style_circles, linewidth=1)
+plot(rsiMA, "RSI-based MA", color=color.new(rsiMA>rsiMA[1]?color.white:color.gray,10), style=plot.style_line, linewidth=1)
+rsiUpperBand = hline(70, "RSI Upper Band", color=#787B86)
+hline(50, "RSI Middle Band", color=color.new(#787B86, 80))
+rsiLowerBand = hline(30, "RSI Lower Band", color=#787B86)
+fill(rsiUpperBand, rsiLowerBand, color=color.rgb(126, 87, 194, 90), title="RSI Background Fill")
+bbUpperBand = plot(isBB ? rsiMA + ta.stdev(rsi, maLengthInput) * bbMultInput : na, title = "Upper Bollinger Band", color=color.green)
+bbLowerBand = plot(isBB ? rsiMA - ta.stdev(rsi, maLengthInput) * bbMultInput : na, title = "Lower Bollinger Band", color=color.green)
+fill(bbUpperBand, bbLowerBand, color= isBB ? color.new(color.green, 90) : na, title="Bollinger Bands Background Fill")
+
+
+var _rsiBuy = false
+var _rsiSell = false
+var _stBuy =false
+var _stSell = false
+
+var RSIBuySignal = false
+RSIBuySignal :=  math.avg(rsi, rsi[1], rsi[2]) > math.avg(rsi[3], rsi[4], rsi[5]) and math.avg(rsi, rsi[1], rsi[2]) > math.avg(rsiMA, rsiMA[1], rsiMA[2]) and  math.avg(rsi[3], rsi[4], rsi[5]) < math.avg(rsiMA[3], rsiMA[4], rsiMA[5]) //rsi > rsi[2] and rsi[2] > rsi[3] and rsi[3] < rsi[4] and rsi[4] < rsiMA[4] and rsi[1] > rsiMA[1] //and rsi[3] < rsiMA[3] and rsi[2] > rsiMA[2]
+
+var label _laRsiBUY = na
+if RSIBuySignal
+    _rsiBuy := true
+    _rsiSell := false
+    label.delete(_laRsiBUY)
+    _laRsiBUY := label.new(x=time, y=rsi, text="RSI", xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_upper_left)
+plot((RSIBuySignal) and close > high[1]+syminfo.mintick ? rsi: na, title="Buy Signal", color=plot_color, linewidth=2, style=plot.style_circles)
+
+var RSISellSignal = false
+RSISellSignal := math.avg(rsi, rsi[1], rsi[2]) < math.avg(rsi[3], rsi[4], rsi[5]) and math.avg(rsi, rsi[1], rsi[2]) < math.avg(rsiMA, rsiMA[1], rsiMA[2]) and  math.avg(rsi[3], rsi[4], rsi[5]) > math.avg(rsiMA[3], rsiMA[4], rsiMA[5])  //rsi < rsi[2] and rsi[2] < rsi[3] and rsi[3] > rsi[4] and rsi[4] > rsiMA[4] and rsi[1] < rsiMA[1] //and rsi[3] < rsiMA[3] and rsi[2] > rsiMA[2]
+
+var label _laRsiSELL = na
+if RSISellSignal
+    _rsiSell = true
+    _rsiBuy := false
+    label.delete(_laRsiSELL)
+    _laRsiSELL := label.new(x=time, y=rsi, text="RSI", xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_lower_right)
+plot( (RSISellSignal) and close < low[1]-syminfo.mintick ? rsi: na, title="Sell Signal", color=plot_color, linewidth=2, style=plot.style_circles)
+
+//SCTRV
+//ta.ema(rsrank,7) ta.ema(rsrank,56)
+
+STBuySignal = (ta.crossover(ta.ema(rsrank,5), ta.ema(rsrank,14)) or (ta.crossover(rsrank, ta.ema(rsrank,56)) ) ) and (rsi > rsiMA or SCTRV > 40)
+STSellSignal = (ta.crossunder(ta.ema(rsrank,5), ta.ema(rsrank,14)) or (ta.crossunder(rsrank, ta.ema(rsrank,56)) ) or ta.crossunder(rsi, rsiMA) ) and (SCTRV < 80 or rsi < rsiMA)
+
+tranBg = SCTRV < 5 ? 85 : SCTRV < 10 ? 88 : SCTRV < 20 ? 92 : SCTRV < 50 ? 98 : SCTRV > 85 ? 88 : 92
+bgColor = ( ta.ema(rsrank,5) > ta.ema(rsrank,14) or rsrank > ta.ema(rsrank,56) ) and (rsi > rsiMA or SCTRV > 40) ? color.new(color.lime,tranBg) : color.new(color.red,tranBg)
+bgcolor(bgColor)
+
+
+//plotshape( STBuySignal  ? rsrank : na, title="UpTrend Begins",   location=location.absolute, style=shape.triangleup,   size=size.tiny, color=color.green)
+//plotshape( STSellSignal ? rsrank : na, title="DownTrend Begins", location=location.absolute, style=shape.triangledown, size=size.tiny, color=color.red)
+
+
+var label _laBUY = na
+var label _laSELL = na
+
+if (STBuySignal)
+    _stBuy := true
+    _stSell := false
+    label.delete(_laBUY)
+    //label.delete(_laSELL)
+    //if close > high[1]+syminfo.mintick
+    _laBUY := label.new(x=time, y=rsrank, text="", xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.green,80), textcolor=color.green, size=size.small, style=label.style_label_lower_right)
+plot((STBuySignal) and close > high[1]+syminfo.mintick ? rsrank: na, title="Buy Signal", color=plot_color, linewidth=3, style=plot.style_circles)
+
+
+if (STSellSignal)
+    _stBuy := false
+    _stSell := true
+    //label.delete(_laBUY)
+    label.delete(_laSELL)
+    //if close < low[1]-syminfo.mintick
+    _laSELL := label.new(x=time, y=rsrank, text="", xloc=xloc.bar_time, yloc=yloc.price, color=color.new(color.red,80), textcolor=color.red, size=size.small, style=label.style_label_upper_right)
+plot( (STSellSignal) and close < low[1]-syminfo.mintick ? rsrank: na, title="Sell Signal", color=plot_color, linewidth=3, style=plot.style_circles)
+
+
+if strategyOrderType == "ST+RSI"
+    if (_rsiBuy and _stBuy and (STBuySignal or RSIBuySignal)) //and (strategy.opentrades == 0)
+        strategy.entry(RSIBuySignal?"RSE":"STE", direction=strategy.long, stop=high, qty=tradeMaxAmount/(high+syminfo.mintick)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+    if (STSellSignal or RSISellSignal) //and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+        strategy.exit(RSISellSignal?"RSX":"STX", stop=low)
+
+
+if strategyOrderType == "ST||RSI"
+    if (STBuySignal or RSIBuySignal) //and (strategy.opentrades == 0)
+        strategy.entry(RSIBuySignal?"RSE":"STE", direction=strategy.long, stop=high, qty=tradeMaxAmount/(high+syminfo.mintick)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+    if (STSellSignal or RSISellSignal) //and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+        strategy.exit(RSISellSignal?"RSX":"STX", stop=low)
+
+if strategyOrderType == "ST"
+    if (STBuySignal) //and (strategy.opentrades == 0)
+        strategy.entry("STE", direction=strategy.long, stop=high, qty=tradeMaxAmount/(high+syminfo.mintick)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+    if (STSellSignal) //and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+        strategy.exit("STX", stop=low)
+
+if strategyOrderType == "RSI"
+    if (RSIBuySignal) //and (strategy.opentrades == 0)
+        strategy.entry("RSE", direction=strategy.long, stop=high, qty=tradeMaxAmount/(high+syminfo.mintick)) //*(100-initStopLossPrecent)/100, qty=tradeMaxAmount/high)
+    if (RSISellSignal) //and (strategy.position_size > 0) // or ((recentHigh - close) / recentHigh) > longStopLossPrecent/100
+        strategy.exit("RSX", stop=low)
+
+
+showTradingTable=input.bool(title="Show Trading Table", defval=true)
+TradingTableLayout=input.string(title="Trading Table Layout", defval="1x6", options=["1x6","6x2","2x3"])
+TradingTablePosition=input.string(title="Trading Table Position", defval=position.top_center, options=[position.bottom_center, position.bottom_left, position.bottom_right, position.middle_center, position.middle_left, position.middle_right, position.top_center, position.top_left, position.top_right])
+TradingTableSize=input.string(title="Trading Table Size", defval=size.normal, options=[size.auto, size.huge, size.large, size.normal, size.small, size.tiny])
+if showTradingTable
+    var label _laTradeSize = na
+    label.delete(_laTradeSize)
+    var _orderPrice = close
+    _orderPrice := close
+    var _orderSize = math.round(tradeMaxAmount/_orderPrice,0)
+    _orderSize := math.round(tradeMaxAmount/_orderPrice,0)
+    //_laTradeSize := label.new(x=time+1, y=ta.highest(high,20), text=str.format("Order Size {0,number,#} | ${1,number,#.##} / ${2,number,#.##}", _orderSize, _orderSize*_orderPrice, _orderPrice), xloc=xloc.bar_time, yloc=yloc.price, color=color.white, textcolor=color.black, size=size.small, style=label.style_label_lower_left)
+    //label.set_x(_laTradeSize, label.get_x(_laTradeSize) + math.round(ta.change(time)*1.5))
+    //label.delete(_laTradeSize[1])
+    if TradingTableLayout == "6x2"
+        var tbl = table.new(position=TradingTablePosition, rows=6, columns=2, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 2, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 2, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "1x6"
+        var tbl = table.new(position=TradingTablePosition, rows=1, columns=6, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 3, 0, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 4, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 5, 0, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
+    if TradingTableLayout == "2x3"
+        var tbl = table.new(position=TradingTablePosition, rows=2, columns=3, border_width = 1)
+        table.cell(tbl, 0, 0, 'Entry Price', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 0, 1, str.tostring(_orderPrice, "$#.##"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 1, 0, 'Total Cost', bgcolor=#cccccc, text_size=TradingTableSize)
+        table.cell(tbl, 1, 1, str.tostring(_orderSize*_orderPrice, "$#.#"), bgcolor=color.new(color.yellow, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 0, 'Order Size', bgcolor=color.new(#cccccc, 20), text_size=TradingTableSize)
+        table.cell(tbl, 2, 1, str.tostring(_orderSize, "#.#"), bgcolor=color.white, text_size=TradingTableSize)
